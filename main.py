@@ -124,7 +124,9 @@ def main():
         device_map="auto",
         torch_dtype=torch.float16,
         quantization_config=bnb_config,
+        # cache_dir="./cache/",
     )
+    model = torch.compile(model)
     print(f"> Loaded model: {model_name}")
     model.eval()
 
