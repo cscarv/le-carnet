@@ -6,6 +6,7 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig
 from datasets import load_dataset
 from torch.utils.data import DataLoader
+import jsonlines
 
 
 def parse_args():
@@ -18,16 +19,28 @@ def parse_args():
         help="Dataset splits to translate (train, validation).",
     )
     parser.add_argument(
-        "--batch_size", type=int, default=32, help="Batch size for DataLoader."
+        "--batch_size",
+        type=int,
+        default=32,
+        help="Batch size for DataLoader.",
     )
     parser.add_argument(
-        "--num_workers", type=int, default=4, help="Number of dataloader workers."
+        "--num_workers",
+        type=int,
+        default=2,
+        help="Number of DataLoader workers. Increase if more CPU cores are available.",
     )
     parser.add_argument(
         "--output_dir",
         type=Path,
         default=Path("data"),
         help="Directory for output files.",
+    )
+    parser.add_argument(
+        "--max_length",
+        type=int,
+        default=256,
+        help="Max length for tokenization and generation.",
     )
     return parser.parse_args()
 
@@ -47,7 +60,7 @@ def get_dataloader(dataset, batch_size: int, num_workers: int):
     )
 
 
-def translate_batch(texts, tokenizer, model, device, max_length=512):
+def translate_batch(texts, tokenizer, model, device, max_length):
     inputs = tokenizer(
         texts,
         return_tensors="pt",
@@ -63,7 +76,6 @@ def translate_batch(texts, tokenizer, model, device, max_length=512):
             forced_bos_token_id=target_lang_id,
             max_length=max_length,
         )
-
     return tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
 
@@ -76,29 +88,34 @@ def translate_split(
     batch_size: int,
     num_workers: int,
     output_dir: Path,
+    max_length: int,
 ):
     split = "validation" if split_name == "validation" else "train"
-    dataset = load_dataset(dataset_name, split=split, cache_dir="./cache/")
-    print(f"> Loaded {split} split: {len(dataset)} samples")
-
-    loader = get_dataloader(dataset, batch_size, num_workers)
+    dataset = load_dataset(dataset_name, split=split)
     output_dir.mkdir(parents=True, exist_ok=True)
     out_file = output_dir / f"{split}.jsonl"
 
-    # Check if the output file already exists
+    start_idx = 0
     if out_file.exists():
-        answer = input(f"File '{out_file}' exists. Overwrite? [y/N]: ").strip().lower()
-        if answer not in ("y", "yes"):
-            print(f"> Skipping {split} split translation.")
-            return
+        with jsonlines.open(out_file, mode="r") as reader:
+            start_idx = sum(1 for _ in reader)
+        print(f"> Resuming from sample #{start_idx}")
 
-    with out_file.open("w", encoding="utf-8") as f:
+    if start_idx >= len(dataset):
+        print(f"> All {len(dataset)} samples already processed—skipping.")
+        return
+    dataset = dataset.select(range(start_idx, len(dataset)))
+
+    loader = get_dataloader(dataset, batch_size, num_workers)
+    with jsonlines.open(out_file, mode="a") as writer:
         for batch in tqdm(loader, desc=f"Translating {split}", unit="batch"):
-            translated = translate_batch(batch["text"], tokenizer, model, device)
+            translated = translate_batch(
+                batch["text"], tokenizer, model, device, max_length
+            )
             for text in translated:
-                f.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
+                writer.write({"text": text})
 
-    print(f"> Saved {split} translations to {out_file}")
+    print(f"> Saved {len(dataset)} more translations to {out_file}")
 
 
 def main():
@@ -124,7 +141,6 @@ def main():
         device_map="auto",
         torch_dtype=torch.float16,
         quantization_config=bnb_config,
-        # cache_dir="./cache/",
     )
     model = torch.compile(model)
     print(f"> Loaded model: {model_name}")
@@ -140,6 +156,7 @@ def main():
             args.batch_size,
             args.num_workers,
             args.output_dir,
+            args.max_length,
         )
 
 
