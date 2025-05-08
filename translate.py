@@ -1,5 +1,4 @@
 import argparse
-import json
 from pathlib import Path
 from tqdm import tqdm
 import torch
@@ -12,7 +11,7 @@ import jsonlines
 def parse_args():
     parser = argparse.ArgumentParser(description="Translate TinyStories with NLLB.")
     parser.add_argument(
-        "--splits",
+        "--split",
         nargs="+",
         choices=["train", "validation"],
         required=True,
@@ -39,7 +38,7 @@ def parse_args():
     parser.add_argument(
         "--max_length",
         type=int,
-        default=256,
+        default=512,
         help="Max length for tokenization and generation.",
     )
     return parser.parse_args()
@@ -75,12 +74,14 @@ def translate_batch(texts, tokenizer, model, device, max_length):
             **inputs,
             forced_bos_token_id=target_lang_id,
             max_length=max_length,
+            num_beams=4,
+            early_stopping=True,
         )
     return tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
 
 def translate_split(
-    split_name: str,
+    split: str,
     dataset_name: str,
     tokenizer,
     model,
@@ -90,7 +91,6 @@ def translate_split(
     output_dir: Path,
     max_length: int,
 ):
-    split = "validation" if split_name == "validation" else "train"
     dataset = load_dataset(dataset_name, split=split)
     output_dir.mkdir(parents=True, exist_ok=True)
     out_file = output_dir / f"{split}.jsonl"
@@ -104,10 +104,12 @@ def translate_split(
     if start_idx >= len(dataset):
         print(f"> All {len(dataset)} samples already processed—skipping.")
         return
-    dataset = dataset.select(range(start_idx, len(dataset)))
 
+    dataset = dataset.select(range(start_idx, len(dataset)))
     loader = get_dataloader(dataset, batch_size, num_workers)
-    with jsonlines.open(out_file, mode="a") as writer:
+
+    with open(out_file, mode="a", encoding="utf-8") as f:
+        writer = jsonlines.Writer(f)
         for batch in tqdm(loader, desc=f"Translating {split}", unit="batch"):
             translated = translate_batch(
                 batch["text"], tokenizer, model, device, max_length
@@ -120,7 +122,11 @@ def translate_split(
 
 def main():
     args = parse_args()
+    # model_name = "facebook/nllb-200-distilled-600M"
+    # model_name = "facebook/nllb-200-distilled-1.3B"
     model_name = "facebook/nllb-200-1.3B"
+    # model_name = "facebook/nllb-200-3.3B"
+
     dataset_name = "roneneldan/TinyStories"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -146,18 +152,17 @@ def main():
     print(f"> Loaded model: {model_name}")
     model.eval()
 
-    for split_name in args.splits:
-        translate_split(
-            split_name,
-            dataset_name,
-            tokenizer,
-            model,
-            device,
-            args.batch_size,
-            args.num_workers,
-            args.output_dir,
-            args.max_length,
-        )
+    translate_split(
+        args.split,
+        dataset_name,
+        tokenizer,
+        model,
+        device,
+        args.batch_size,
+        args.num_workers,
+        args.output_dir,
+        args.max_length,
+    )
 
 
 if __name__ == "__main__":
