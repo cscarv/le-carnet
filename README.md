@@ -36,7 +36,7 @@ Generate stories with Mistral (Free Tier):
 echo "your_api_key_here" > mistral_api_key.txt
 ```
 ```bash
-python mistral.py --model_name "mistral-small-2501" --total_requests 2048
+python mistral.py --api_key_file "mistral_api_key.txt" --model_name "mistral-small-2501" --total_requests 2048
 ```
 
 Translate stories from TinyStories:

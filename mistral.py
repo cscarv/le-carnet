@@ -129,10 +129,10 @@ def main(args):
     """
 
     # Set the API key
-    with open("mistral_api_key.txt") as f:
+    with open(args.api_key_file, "r") as f:
         api_key = f.read().strip()
     if not api_key:
-        raise ValueError("API key not found. Please set it in 'mistral_api_key.txt'.")
+        raise ValueError(f"API key not found. Please set it in {args.api_key_file}.")
 
     # Initialize the vocabulary and client
     vocab = Vocabulary()
@@ -151,6 +151,12 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate stories with a LLM.")
+    parser.add_argument(
+        "api_key_file",
+        type=str,
+        default="mistral_api_key.txt",
+        help="Path to the file containing the API key.",
+    )
     parser.add_argument(
         "--model_name",
         type=str,
