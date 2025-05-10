@@ -23,20 +23,21 @@ _Validation is done (12 000 samples)! Currently working on the training set._
 ## Building the Dataset
 _Commands must be executed from the project root directory._
 
-Generate stories using an API:
+Generate batch of stories using an API:
 ```bash
 echo "your_api_key_here" > api_key.txt
 ```
-Batch generation:
 ```bash
 python generate.py --base_url "your_base_url" --model_name "your_model_name" --total_requests 2048 --batch_size 32 --concurrency 2
 ```
 
-Single Story Generation (Free Tier):
+Generate stories with Mistral (Free Tier):
+```bash
+echo "your_api_key_here" > mistral_api_key.txt
+```
 ```bash
 python mistral.py --model_name "mistral-small-2501" --total_requests 2048
 ```
-
 
 Translate stories from TinyStories:
 ```bash
