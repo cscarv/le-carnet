@@ -8,6 +8,7 @@ tante
 bébé
 famille
 chat
+château
 chien
 poisson
 oiseau
@@ -90,6 +91,7 @@ métro
 tramway
 scooter
 hélicoptère
+héros
 fusée
 montgolfière
 roller
@@ -169,6 +171,7 @@ confiture
 pain
 croissant
 brioche
+pieuvre
 yaourt
 fromage
 lait
@@ -234,6 +237,7 @@ veste
 gilet
 chaussette
 chaussure
+
 sandale
 bottes
 chapeau
@@ -315,6 +319,7 @@ micro-ondes
 grille-pain
 aspirateur
 ventilateur
+pirate
 oreiller
 couverture
 drap

@@ -57,8 +57,13 @@ def send_message(client, message, model_name):
     for attempt in range(5):  # 5 attempts total
         try:
             resp = client.chat.complete(
-                messages=message, model=model_name, temperature=0.7, max_tokens=512
+                messages=message,
+                model=model_name,
+                temperature=0.9,
+                max_tokens=512,
+                top_p=0.95,
             )
+
             return resp.choices[0].message.content
         except SDKError as e:
             if getattr(e, "status_code", None) == 429 and attempt < 4:
