@@ -152,7 +152,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate stories with a LLM.")
     parser.add_argument(
-        "api_key_file",
+        "--api_key_file",
         type=str,
         default="mistral_api_key.txt",
         help="Path to the file containing the API key.",
