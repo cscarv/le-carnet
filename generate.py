@@ -101,7 +101,7 @@ async def generate_batches(
                         client,
                         msgs,
                         model=model_name,
-                        temperature=0.9,
+                        temperature=0.8,
                         max_tokens=512,
                         top_p=0.95,
                     )
