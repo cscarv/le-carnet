@@ -6,6 +6,7 @@ import random
 import jsonlines
 from tqdm.asyncio import tqdm_asyncio
 import argparse
+from tqdm import tqdm
 
 
 class Vocabulary:
@@ -60,7 +61,7 @@ async def send_message(client, messages, *args, **kwargs):
             return response.choices[0].message.content
 
         except RateLimitError:
-            print(f"Rate limit exceeded. Retrying in {backoff_time} seconds...")
+            tqdm.write(f"Rate limit exceeded. Retrying in {backoff_time} seconds...")
             await asyncio.sleep(backoff_time)
             backoff_time *= 2
     raise RuntimeError("Max retries reached. Halting execution.")
@@ -120,7 +121,7 @@ async def generate_batches(
         stories_generated += len(batch_output)
 
     elapsed = time.time() - start
-    print(f"> {stories_generated} stories generated in {elapsed:.2f} seconds.")
+    tqdm.write(f"> {stories_generated} stories generated in {elapsed:.2f} seconds.")
 
 
 def count_lines(file_path: str) -> int:
@@ -134,6 +135,8 @@ async def main(args):
     # Set the API key
     with open("api_key.txt") as f:
         api_key = f.read().strip()
+    if not api_key:
+        raise ValueError("API key not found. Please set it in 'api_key.txt'.")
 
     # Initialize the vocabulary and client
     vocab = Vocabulary()

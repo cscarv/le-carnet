@@ -9,7 +9,9 @@ _Validation is done (12 000 samples)! Currently working on the training set._
 
 ## Dataset
 
-- Model used for generation: [`mistralai/Mistral-Small-3.1-24B-Instruct-2503`](https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503)
+- Model used for generation: 
+    - [`mistralai/Mistral-Small-3.1-24B-Instruct-2503`](https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503)
+    - [`mistralai/Mistral-Nemo-Instruct-2407`](https://huggingface.co/mistralai/Mistral-Nemo-Instruct-2407)
 - Model used for translation: [`facebook/nllb-200-1.3B`](https://huggingface.co/facebook/nllb-200-1.3B)
 
 ## Objectives
@@ -19,16 +21,22 @@ _Validation is done (12 000 samples)! Currently working on the training set._
 - Train multilingual models (French + English) for TinyStories generation
 
 ## Building the Dataset
-Commands must be executed from the project root directory.
+_Commands must be executed from the project root directory._
 
 Generate stories using an API:
 ```bash
 echo "your_api_key_here" > api_key.txt
 ```
-
+Batch generation:
 ```bash
 python generate.py --base_url "your_base_url" --model_name "your_model_name" --total_requests 2048 --batch_size 32 --concurrency 2
 ```
+
+Single Story Generation (Free Tier):
+```bash
+python mistral.py --model_name "mistral-small-2501" --total_requests 2048
+```
+
 
 Translate stories from TinyStories:
 ```bash
