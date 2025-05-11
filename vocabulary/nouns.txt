@@ -237,7 +237,6 @@ veste
 gilet
 chaussette
 chaussure
-
 sandale
 bottes
 chapeau
