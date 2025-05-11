@@ -37,7 +37,7 @@ def build_batch(vocab: Vocabulary, batch_size: int) -> list[list[dict]]:
 
         prompt = f"""
         Écris une courte histoire (3 à 5 paragraphes) qui n’utilise que des mots très simples qu’un enfant de 3 ans comprendrait. 
-        L’histoire doit utiliser le verbe « {verb} », le nom « {noun} » et l’adjectif « {adjective} ». 
+        L’histoire doit s’articuler autour du verbe « {verb} », du nom « {noun} » et de l’adjectif « {adjective} ». 
         L'histoire doit avoir les caractéristiques suivantes : {feature_1}, {feature_2}. 
         Souviens-toi de n’utiliser que des mots simples !"
         """
