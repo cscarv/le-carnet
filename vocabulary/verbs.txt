@@ -102,20 +102,12 @@ sauter
 savoir
 sentir
 serrer
-se réveiller
-se lever
 se coucher
-se brosser
-se laver
 se moucher
 se peigner
-se reposer
 se tromper
-se cacher
-se dépêcher
 se fâcher
 se moquer
-s'habiller
 s'amuser
 s'endormir
 sourire
@@ -157,11 +149,9 @@ attacher
 attrister
 augmenter
 avertir
-badigeonner
 barbouiller
 bavarder
 bercer
-bisouiller
 blaguer
 blesser
 bondir
@@ -184,7 +174,6 @@ consoler
 copier
 corriger
 coudre
-coup
 couper
 couronner
 créer
@@ -258,7 +247,6 @@ installer
 interdire
 intéresser
 inverser
-jubil
 laisser
 lancer
 lécher

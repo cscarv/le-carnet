@@ -122,9 +122,6 @@ armoire
 commode
 bureau
 fauteuil
-table basse
-lit bébé
-chaise haute
 banc
 porte-manteau
 miroir
@@ -142,7 +139,6 @@ horloge
 montre
 clé
 sac
-sac à dos
 cartable
 boîte
 valise
