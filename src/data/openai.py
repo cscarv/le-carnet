@@ -51,17 +51,20 @@ def get_async_client(api_key: str, base_url: str) -> AsyncOpenAI:
     return AsyncOpenAI(api_key=api_key, base_url=base_url)
 
 
-async def send_message(client, messages, *args, **kwargs):
+async def send_message(client, messages, model_name):
     backoff_time = 1
     for _ in range(3):
         try:
             response = await client.chat.completions.create(
-                messages=messages, *args, **kwargs
+                messages=messages,
+                model=model_name,
+                temperature=0.7,
+                max_tokens=512,
+                top_p=0.95,
             )
             return response.choices[0].message.content
 
         except RateLimitError:
-            tqdm.write(f"Rate limit exceeded. Retrying in {backoff_time} seconds...")
             await asyncio.sleep(backoff_time)
             backoff_time *= 2
     raise RuntimeError("Max retries reached. Halting execution.")
@@ -71,6 +74,7 @@ async def save_stories_to_jsonl(stories: list[str], file_path: str):
     """
     Appends a list of stories to a JSONL file, with the format {"text": Story}.
     """
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, mode="a", encoding="utf-8") as f:
         writer = jsonlines.Writer(f)
         writer.write_all({"text": story} for story in stories)
@@ -100,10 +104,7 @@ async def generate_batches(
                     send_message(
                         client,
                         msgs,
-                        model=model_name,
-                        temperature=0.7,
-                        max_tokens=512,
-                        top_p=0.95,
+                        model_name,
                     )
                     for msgs in messages_batch
                 ]
@@ -125,23 +126,31 @@ async def generate_batches(
     tqdm.write(f"> {stories_generated} stories generated in {elapsed:.2f} seconds.")
 
 
-def count_lines(file_path: str) -> int:
-    """Counts the number of lines in a file."""
-    with open(file_path, "r") as f:
-        return sum(1 for _ in f)
+def generate_output_file(output_dir, model_name: str) -> str:
+    """
+    Generates a unique output file name based on the model name and current timestamp.
+    """
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    return os.path.join(output_dir, f"stories_{model_name}_{timestamp}.jsonl")
 
 
 async def main(args):
+    """
+    Main function to set up the client and generate stories.
+    """
 
     # Set the API key
-    with open("api_key.txt") as f:
-        api_key = f.read().strip()
+    api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        raise ValueError("API key not found. Please set it in 'api_key.txt'.")
+        raise ValueError(
+            f"API key not found. Set the OPENAI_API_KEY environment variable."
+        )
 
     # Initialize the vocabulary and client
     vocab = Vocabulary()
     client = get_async_client(api_key=api_key, base_url=args.base_url)
+
+    output_file = generate_output_file(args.output_dir, args.model_name)
 
     # Generate batches of stories
     await generate_batches(
@@ -151,7 +160,7 @@ async def main(args):
         args.total_requests,
         args.batch_size,
         args.concurrency,
-        args.output_file,
+        output_file,
     )
 
 
@@ -167,19 +176,19 @@ if __name__ == "__main__":
     parser.add_argument(
         "--total_requests",
         type=int,
-        default=10000,
+        default=512,
         help="Total number of requests to make.",
     )
     parser.add_argument(
         "--batch_size", type=int, default=32, help="Batch size for each request."
     )
     parser.add_argument(
-        "--concurrency", type=int, default=1, help="Number of concurrent requests."
+        "--concurrency", type=int, default=2, help="Number of concurrent requests."
     )
     parser.add_argument(
-        "--output_file",
+        "--output_dir",
         type=str,
-        default="data/stories.jsonl",
+        default="src/data/generated/openai",
         help="Output file path for storing stories.",
     )
 

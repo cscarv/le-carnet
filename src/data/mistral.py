@@ -9,7 +9,7 @@ from mistralai.models.sdkerror import SDKError
 
 
 class Vocabulary:
-    def __init__(self, vocab_dir="vocabulary"):
+    def __init__(self, vocab_dir="src/data/vocabulary"):
         categories = ["adjectives", "nouns", "verbs", "features"]
         for category in categories:
             file_path = os.path.join(vocab_dir, f"{category}.txt")
@@ -44,7 +44,6 @@ def build_message(vocab: Vocabulary):
             "content": prompt,
         }
     ]
-
     return message
 
 
@@ -68,11 +67,11 @@ def send_message(client, message, model_name):
         except SDKError as e:
             if getattr(e, "status_code", None) == 429 and attempt < 4:
                 wait = backoff + random.random() * 0.5
-                tqdm.write(f"Rate limit, retry {attempt + 1} in {wait:.1f}s…")
                 time.sleep(wait)
                 backoff *= 2
             else:
-                raise
+                raise e
+
     raise RuntimeError("Max retries reached")
 
 
@@ -80,6 +79,7 @@ def save_stories_to_jsonl(stories: list[str], file_path: str):
     """
     Appends a list of stories to a JSONL file, with the format {"text": Story}.
     """
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, mode="a", encoding="utf-8") as f:
         writer = jsonlines.Writer(f)
         writer.write_all({"text": story} for story in stories)
@@ -120,12 +120,15 @@ def generate_stories(
     tqdm.write(f"> {total_requests} stories generated in {elapsed:.2f} seconds.")
 
 
-def generate_output_file(model_name: str) -> str:
+def generate_output_file(model_name: str, output_dir: str) -> str:
     """
     Generates a unique output file name based on the model name and current timestamp.
     """
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    return f"data/stories_{model_name}_{timestamp}.jsonl"
+    return os.path.join(
+        output_dir,
+        f"stories_{model_name}_{timestamp}.jsonl",
+    )
 
 
 def main(args):
@@ -134,15 +137,16 @@ def main(args):
     """
 
     # Set the API key
-    with open(args.api_key_file, "r") as f:
-        api_key = f.read().strip()
+    api_key = os.getenv("MISTRAL_API_KEY")
     if not api_key:
-        raise ValueError(f"API key not found. Please set it in {args.api_key_file}.")
+        raise ValueError(
+            f"API key not found. Set the MISTRAL_API_KEY environment variable."
+        )
 
     # Initialize the vocabulary and client
     vocab = Vocabulary()
     client = get_client(api_key=api_key)
-    output_file = generate_output_file(args.model_name)
+    output_file = generate_output_file(args.model_name, args.output_dir)
 
     # Generate batches of stories
     generate_stories(
@@ -157,16 +161,9 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate stories with a LLM.")
     parser.add_argument(
-        "--api_key_file",
-        type=str,
-        default="mistral_api_key.txt",
-        help="Path to the file containing the API key.",
-    )
-    parser.add_argument(
         "--model_name",
         type=str,
         default="mistral-small-2501",
-        choices=["mistral-small-2501", "open-mistral-nemo"],
         help="Model name to use for generating stories.",
     )
     parser.add_argument(
@@ -174,6 +171,12 @@ if __name__ == "__main__":
         type=int,
         default=512,
         help="Total number of requests to make.",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="src/data/generated/mistral",
+        help="Output file path for storing stories.",
     )
     args = parser.parse_args()
     main(args)

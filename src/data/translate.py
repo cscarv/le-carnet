@@ -8,42 +8,6 @@ from torch.utils.data import DataLoader
 import jsonlines
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Translate TinyStories with NLLB.")
-    parser.add_argument(
-        "--split",
-        nargs="+",
-        choices=["train", "validation"],
-        required=True,
-        help="Dataset splits to translate (train, validation).",
-    )
-    parser.add_argument(
-        "--batch_size",
-        type=int,
-        default=32,
-        help="Batch size for DataLoader.",
-    )
-    parser.add_argument(
-        "--num_workers",
-        type=int,
-        default=2,
-        help="Number of DataLoader workers. Increase if more CPU cores are available.",
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=Path,
-        default=Path("data"),
-        help="Directory for output files.",
-    )
-    parser.add_argument(
-        "--max_length",
-        type=int,
-        default=512,
-        help="Max length for tokenization and generation.",
-    )
-    return parser.parse_args()
-
-
 def collate_fn(batch):
     return {"text": [item["text"] for item in batch]}
 
@@ -120,36 +84,79 @@ def translate_split(
     print(f"> Saved {len(dataset)} more translations to {out_file}")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Translate TinyStories with NLLB.")
+    parser.add_argument(
+        "--split",
+        nargs="+",
+        choices=["train", "validation"],
+        required=True,
+        help="Dataset splits to translate (train, validation).",
+    )
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default="facebook/nllb-200-distilled-600M",
+        choices=[
+            "facebook/nllb-200-distilled-600M",
+            "facebook/nllb-200-distilled-1.3B",
+            "facebook/nllb-200-1.3B",
+            "facebook/nllb-200-3.3B",
+        ],
+        help="Model name to use for translation.",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=32,
+        help="Batch size for DataLoader.",
+    )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=2,
+        help="Number of DataLoader workers. Increase if more CPU cores are available.",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=Path,
+        default=Path("src/data/translated"),
+        help="Directory for output files.",
+    )
+    parser.add_argument(
+        "--max_length",
+        type=int,
+        default=512,
+        help="Max length for tokenization and generation.",
+    )
+    return parser.parse_args()
+
+
 def main():
     args = parse_args()
-    # model_name = "facebook/nllb-200-distilled-600M"
-    # model_name = "facebook/nllb-200-distilled-1.3B"
-    model_name = "facebook/nllb-200-1.3B"
-    # model_name = "facebook/nllb-200-3.3B"
-
     dataset_name = "roneneldan/TinyStories"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"> Using device: {device}")
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     tokenizer.src_lang = "eng_Latn"
     tokenizer.tgt_lang = "fra_Latn"
     tokenizer.padding_side = "right"
-    print(f"> Loaded tokenizer: {model_name}")
+    print(f"> Loaded tokenizer: {args.model_name}")
 
     bnb_config = BitsAndBytesConfig(
         load_in_8bit=True,
         llm_int8_enable_fp32_cpu_offload=True,
     )
     model = AutoModelForSeq2SeqLM.from_pretrained(
-        model_name,
+        args.model_name,
         device_map="auto",
         torch_dtype=torch.float16,
         quantization_config=bnb_config,
     )
     model = torch.compile(model)
-    print(f"> Loaded model: {model_name}")
+    print(f"> Loaded model: {args.model_name}")
     model.eval()
 
     translate_split(
