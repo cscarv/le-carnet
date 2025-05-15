@@ -5,7 +5,7 @@ _(Work in progress...)_
 French TinyStories (name to be changed) is a text dataset of 1 million children's stories in french using very simple vocabulary, based on the English TinyStories dataset. 
 The purpose is to provide a reliable, high-quality resource for pretraining small language models from scratch, aimed at educational and experimental use.
 
-This dataset was created by synthetically generating French short stories using mainly [Mistral-Small-24B-Instruct-2501](https://huggingface.co/mistralai/Mistral-Small-24B-Instruct-2501)
+This dataset was created by synthetically generating French short stories using [Mistral-Small-24B-Instruct-2501](https://huggingface.co/mistralai/Mistral-Small-24B-Instruct-2501)
 
 
 
@@ -14,10 +14,7 @@ This dataset was created by synthetically generating French short stories using 
 ```bash
 make env
 ```
-```bash
-source .venv/bin/activate
-```
-
+That's it, you can now run any command you want!
 
 ## Data Generation Commands
 For Generation tasks set your API key (for translation the model runs locally):

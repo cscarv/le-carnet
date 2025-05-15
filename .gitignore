@@ -1,7 +1,6 @@
-/venv/
-/src/data/generated/
+/.venv/
 /src/data/api_keys/
 /cache/
 /parquets/
 /backup/
-/api_keys/
+/results/

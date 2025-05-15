@@ -84,56 +84,10 @@ def translate_split(
     print(f"> Saved {len(dataset)} more translations to {out_file}")
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Translate TinyStories with NLLB.")
-    parser.add_argument(
-        "--split",
-        nargs="+",
-        choices=["train", "validation"],
-        required=True,
-        help="Dataset splits to translate (train, validation).",
-    )
-    parser.add_argument(
-        "--model_name",
-        type=str,
-        default="facebook/nllb-200-distilled-600M",
-        choices=[
-            "facebook/nllb-200-distilled-600M",
-            "facebook/nllb-200-distilled-1.3B",
-            "facebook/nllb-200-1.3B",
-            "facebook/nllb-200-3.3B",
-        ],
-        help="Model name to use for translation.",
-    )
-    parser.add_argument(
-        "--batch_size",
-        type=int,
-        default=32,
-        help="Batch size for DataLoader.",
-    )
-    parser.add_argument(
-        "--num_workers",
-        type=int,
-        default=2,
-        help="Number of DataLoader workers. Increase if more CPU cores are available.",
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=Path,
-        default=Path("src/data/translated"),
-        help="Directory for output files.",
-    )
-    parser.add_argument(
-        "--max_length",
-        type=int,
-        default=512,
-        help="Max length for tokenization and generation.",
-    )
-    return parser.parse_args()
-
-
-def main():
-    args = parse_args()
+def main(args):
+    """
+    Main function to load the model and tokenizer, and translate the dataset.
+    """
     dataset_name = "roneneldan/TinyStories"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -173,4 +127,49 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Translate TinyStories with NLLB.")
+    parser.add_argument(
+        "--split",
+        nargs="+",
+        choices=["train", "validation"],
+        required=True,
+        help="Dataset splits to translate (train, validation).",
+    )
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default="facebook/nllb-200-distilled-600M",
+        choices=[
+            "facebook/nllb-200-distilled-600M",
+            "facebook/nllb-200-distilled-1.3B",
+            "facebook/nllb-200-1.3B",
+            "facebook/nllb-200-3.3B",
+        ],
+        help="Model name to use for translation.",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=32,
+        help="Batch size for DataLoader.",
+    )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=2,
+        help="Number of DataLoader workers. Increase if more CPU cores are available.",
+    )
+    parser.add_argument(
+        "--max_length",
+        type=int,
+        default=512,
+        help="Max length for tokenization and generation.",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=Path,
+        default=Path("results/translated"),
+        help="Directory for output files.",
+    )
+    args = parser.parse_args()
+    main(args)

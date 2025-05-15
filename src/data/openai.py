@@ -188,7 +188,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="src/data/generated/openai",
+        default="results/generated/openai",
         help="Output file path for storing stories.",
     )
 
