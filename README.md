@@ -5,7 +5,7 @@ _(Work in progress...)_
 French TinyStories (name to be changed) is a text dataset of 1 million children's stories in french using very simple vocabulary, based on the English TinyStories dataset. 
 The purpose is to provide a reliable, high-quality resource for pretraining small language models from scratch, aimed at educational and experimental use.
 
-"This dataset was created by synthetically generating French short stories using Mistral Small 3.1.
+This dataset was created by synthetically generating French short stories using mainly [Mistral-Small-24B-Instruct-2501](https://huggingface.co/mistralai/Mistral-Small-24B-Instruct-2501)
 
 
 
@@ -39,8 +39,8 @@ $env:OPENAI_API_KEY="your_api_key"
 
 | Task                          | Make Command           | Equivalent CLI Command                                                                                                                                               |
 |-------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Mistral Story Generation      | `make generate-mistral` | `python src/data/mistral.py --model_name mistral-small-2501 --total_requests 512`                                                |
-| OpenAI Story Generation       | `make generate-openai`  | `python src/data/openai.py --base_url https://api.openai.com/v1/chat/completions --model_name gpt-3.5-turbo --total_requests 512` |
+| Generate Stories with Mistral    | `make generate-mistral` | `python src/data/mistral.py --model_name mistral-small-2501 --total_requests 512`                                                |
+| Generate Stories with OpenAI       | `make generate-openai`  | `python src/data/openai.py --base_url https://api.openai.com/v1/chat/completions --model_name gpt-3.5-turbo --total_requests 512` |
 | Translate TinyStories Dataset | `make translate`        | `python src/data/translation.py --split train --model_name facebook/nllb-200-distilled-600M --batch_size 32 `                              |
 
 

@@ -1,7 +1,0 @@
-transformers
-datasets
-torch
-sentencepiece
-sacremoses
-accelerate
-bitsandbytes
