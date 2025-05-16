@@ -4,3 +4,5 @@
 /parquets/
 /backup/
 /results/
+__pycache__/
+/checkpoints/

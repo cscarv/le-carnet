@@ -4,6 +4,7 @@ from json import JSONDecodeError
 from typing import List, Dict
 from huggingface_hub import create_repo
 import argparse
+import os
 
 
 def load_validation_data(validation_path: str) -> List[Dict]:
@@ -18,46 +19,52 @@ def load_validation_data(validation_path: str) -> List[Dict]:
     return data
 
 
-def create_parquet_dataset(file_path: str, repo_name: str, split: str = "validation"):
-    data = load_validation_data(file_path)
-    ds = hfds.Dataset.from_dict({"text": [item["text"] for item in data]})
-    ds_dict = hfds.DatasetDict({split: ds})
+def create_parquet_dataset(folder_path: str, repo_name: str):
+    dataset_splits = {}
 
+    for file in os.listdir(folder_path):
+        if file.endswith(".jsonl"):
+            split_name = os.path.splitext(file)[0]
+            file_path = os.path.join(folder_path, file)
+
+            data = load_validation_data(file_path)
+            ds = hfds.Dataset.from_dict({"text": [item["text"] for item in data]})
+            dataset_splits[split_name] = ds
+
+    ds_dict = hfds.DatasetDict(dataset_splits)
     create_repo(repo_name, repo_type="dataset", private=True, exist_ok=True)
     ds_dict.push_to_hub(repo_name, private=True)
 
+    print(f"\nSuccessfully pushed the following splits to the Hub repo '{repo_name}':")
+    for split, ds in ds_dict.items():
+        print(f"> {split}: {len(ds)} samples")
+
 
 def main(args):
+    # Make sure the jsonl files in the folder have the correct names 'train.jsonl' and/or 'validation.jsonl'
+
+    print(f"Pushing the dataset to the Hugging Face Hub repo '{args.repo_name}'...")
 
     create_parquet_dataset(
-        file_path=args.file_path,
+        folder_path=args.folder_path,
         repo_name=args.repo_name,
-        split=args.split,
     )
-    print("> Dataset uploaded!")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Create a Parquet dataset from a JSONL file."
+        description="Convert the dataset (folder of json files) to parquet and push it to the Hugging Face Hub."
     )
     parser.add_argument(
-        "--file_path",
+        "--folder_path",
         type=str,
-        default="data/validation.jsonl",
-        help="Path to the JSONL file.",
-    )
-    parser.add_argument(
-        "--split",
-        type=str,
-        choices=["validation", "train"],
-        default="validation",
-        help="Name of the split. Must be 'validation' or 'train'.",
+        default="./backup/",
+        help="Path to the folder containing the JSONL files.",
     )
     parser.add_argument(
         "--repo_name",
         type=str,
-        default="MaxLSB/French-TinyStories",
+        default="MaxLSB/LeCarnet",
         help="Name of the repository to create.",
     )
     args = parser.parse_args()

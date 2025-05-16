@@ -1,38 +1,21 @@
 from dataclasses import dataclass
-import torch
-
-# To be changed
 
 
 @dataclass
-class ModelConfig:
-    vocab_size: int = 50304
+class ModelConfig_3M:
+    vocab_size: int = 50258
+    hidden_size: int = 64
+    intermediate_size: int = 256
+    num_hidden_layers: int = 8
+    num_attention_heads: int = 16
+    hidden_act: str = "silu"
     block_size: int = 512
-    hidden_size: int = 512
-    num_decoder_layers: int = 12
-    num_attention_heads: int = 8
+    max_position_embeddings: int = 2048
+    pad_token_id: int = 50257
+    bos_token_id: int = 50256
+    eos_token_id: int = 50256
+    initializer_range: float = 0.041666666666666664
     rms_norm_eps: float = 1e-6
     rope_theta: float = 10000.0
-    attention_dropout: float = 0.1
-    dropout: float = 0.1
-    layer_norm_epsilon: float = 1e-6
-    d_c_kv: int = 128
-    d_c_q: int = 128
-    d_rotate: int = 64
-    device: str = "cuda" if torch.cuda.is_available() else "cpu"
-
-    total_iters: int = 10000
-    eval_iters: int = 50
-    effective_batch_size: int = 512
-    batch_size: int = 32
-    learning_rate: float = 5e-5
-    weight_decay: float = 0.01
-    adam_epsilon: float = 1e-8
-    gradient_accumulation_steps: int = effective_batch_size // batch_size
-    max_grad_norm: float = 1.0
-    num_workers = 8
-    dtype: str = (
-        "bfloat16"
-        if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
-        else "float16"
-    )
+    attention_bias: bool = False
+    tie_word_embeddings: bool = True

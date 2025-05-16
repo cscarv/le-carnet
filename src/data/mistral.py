@@ -58,7 +58,7 @@ def send_message(client, message, model_name):
             resp = client.chat.complete(
                 messages=message,
                 model=model_name,
-                temperature=0.7,
+                temperature=0.8,
                 max_tokens=512,
                 top_p=0.95,
             )

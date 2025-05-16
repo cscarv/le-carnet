@@ -1,9 +1,8 @@
-# Makefile
-SHELL := cmd.exe
+# Makefile 
 
 # Variables
+ENV_DIR ?= .venv
 ifeq ($(OS),Windows_NT)
-    ENV_DIR ?= .venv
     ACTIVATE := $(ENV_DIR)\Scripts\activate.bat
     PIP := $(ENV_DIR)\Scripts\pip.exe
     PYTHON := $(ENV_DIR)\Scripts\python.exe
@@ -16,6 +15,8 @@ endif
 MISTRAL := src/data/mistral.py
 OPENAI := src/data/openai.py
 TRANSLATE_SCRIPT := src/data/translation.py
+PUSH_TO_HF := src/data/push_to_hf.py
+TRAIN := src/train/train.py
 
 # Defaults
 MISTRAL_MODEL      ?= mistral-small-2501
@@ -29,7 +30,8 @@ SPLIT              ?= train
 MODEL              ?= facebook/nllb-200-distilled-600M
 BATCH_SIZE         ?= 32
 
-ENV_DIR            ?= .venv
+FOLDER_PATH        ?= ./backup/
+REPO_NAME          ?= MaxLSB/LeCarnet
 
 PYTHON_PACKAGES = \
     transformers==4.51.3 \
@@ -38,10 +40,10 @@ PYTHON_PACKAGES = \
     sacremoses==0.1.1 \
     accelerate==1.5.1 \
     bitsandbytes==0.45.4 \
-	jsonlines==4.0.0 \
-	mistralai==1.7.0 \
+    mistralai==1.7.0 \
+    jsonlines==4.0.0
 
-.PHONY: generate-mistral generate-openai translate env
+.PHONY: generate-mistral generate-openai translate env push-dataset train
 
 # Create venv only if not already present
 env: $(ACTIVATE)
@@ -54,7 +56,6 @@ $(ACTIVATE):
         torch==2.6.0+cu124
 	$(PYTHON) -m pip install $(PYTHON_PACKAGES)
 
-# Targets
 generate-mistral:
 	$(PYTHON) $(MISTRAL) --model_name $(MISTRAL_MODEL) --total_requests $(MISTRAL_TOTAL_REQUESTS)
 
@@ -63,3 +64,9 @@ generate-openai:
 
 translate:
 	$(PYTHON) $(TRANSLATE_SCRIPT) --split $(SPLIT) --model_name $(MODEL) --batch_size $(BATCH_SIZE)
+
+push-dataset:
+	$(PYTHON) $(PUSH_TO_HF) --folder_path $(FOLDER_PATH) --repo_name $(REPO_NAME)
+
+train:
+	$(PYTHON) $(TRAIN)

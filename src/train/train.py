@@ -1,3 +1,10 @@
+import argparse
+import os
+import torch
+from huggingface_hub import Repository, create_repo
+from torch.utils.data import DataLoader
+from torch.optim import AdamW
+from tqdm import tqdm
 from datasets import load_dataset
 from transformers import (
     AutoTokenizer,
@@ -5,262 +12,252 @@ from transformers import (
     LlamaForCausalLM,
     get_scheduler,
 )
-from tqdm import tqdm
-from accelerate import Accelerator
-from torch.optim import AdamW
-from train.config import ModelConfig
-import torch
-from torch.utils.data import DataLoader
 
-# https://colab.research.google.com/github/huggingface/notebooks/blob/master/course/en/chapter7/section6_pt.ipynb#scrollTo=ziBdsf0IZO0I
+from config import ModelConfig_3M
 
 
 class Tokenizer:
     """
-    Tokenizer class to load and prepare the tokenizer
+    Tokenizer class to handle tokenization and padding.
     """
 
-    def __init__(self) -> None:
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            "openai-community/gpt2", hf_token="..."
-        )
-        self.tokenizer.pad_token = (
-            self.tokenizer.eos_token
-        )  # Not sure if we should do this
+    def __init__(self, tokenizer_name):
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+        self.tokenizer.padding_side = "right"
 
-    def ready_tokenizer(self):
+    def get_tokenizer(self):
         return self.tokenizer
 
 
-def get_dataset(dataset_name):
-    """
-    Load the dataset from Hugging Face Hub
-    """
-    train_dataset = load_dataset(
-        dataset_name,
-        split="train",
-        cache_dir="./cache/",
-    )
-    val_dataset = load_dataset(
-        dataset_name,
-        split=f"validation",
-        cache_dir="./cache/",
-    )
+def get_dataset(dataset_name, cache_dir):
+    train_dataset = load_dataset(dataset_name, split="train", cache_dir=cache_dir)
+    val_dataset = load_dataset(dataset_name, split="validation", cache_dir=cache_dir)
     return train_dataset, val_dataset
 
 
-def collate_fn(batch):
-    texts = [item["text"] for item in batch]
+class CollateFn:
+    def __init__(self, tokenizer, block_size):
+        self.tokenizer = tokenizer
+        self.block_size = block_size
 
-    input_encodings = tokenizer(
-        texts,
-        max_length=ModelConfig.block_size,
-        padding="max_length",
-        truncation=True,
-        return_tensors="pt",
-    )
+    def __call__(self, batch):
+        texts = [item["text"] for item in batch]
 
-    input_encodings["labels"] = input_encodings["input_ids"].clone()
+        input_encodings = self.tokenizer(
+            texts,
+            max_length=self.block_size,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
+        )
 
-    input_encodings["labels"][:, :-1] = input_encodings["input_ids"][:, 1:]
-    input_encodings["labels"][:, -1] = tokenizer.eos_token_id
-    # Add BOS token ?
+        input_encodings["labels"] = input_encodings["input_ids"].clone()
+        input_encodings["labels"][:, :-1] = input_encodings["input_ids"][:, 1:]
+        input_encodings["labels"][:, -1] = self.tokenizer.eos_token_id
 
-    return input_encodings
-
-
-def get_dataloader(
-    split,
-    dataset,
-    batch_size,
-):
-    is_train = split == "train"
-    return DataLoader(
-        dataset,
-        batch_size=batch_size,
-        collate_fn=collate_fn,
-        shuffle=is_train,
-    )
+        return input_encodings
 
 
-def get_num_params(model):
+def get_llama_config(config) -> LlamaConfig:
     """
-    Get the number of parameters in the model
+    Convert the model configuration to LlamaConfig.
+    """
+    return LlamaConfig(
+        vocab_size=config.vocab_size,
+        pad_token_id=config.pad_token_id,
+        bos_token_id=config.bos_token_id,
+        eos_token_id=config.eos_token_id,
+        hidden_size=config.hidden_size,
+        intermediate_size=config.intermediate_size,
+        num_hidden_layers=config.num_hidden_layers,
+        num_attention_heads=config.num_attention_heads,
+        max_position_embeddings=config.max_position_embeddings,
+        rope_theta=config.rope_theta,
+        rms_norm_eps=config.rms_norm_eps,
+        initializer_range=config.initializer_range,
+        hidden_act=config.hidden_act,
+        tie_word_embeddings=config.tie_word_embeddings,
+    )
+
+
+def get_hf_repo(repo_name: str, output_dir: str) -> Repository:
+    """
+    Create or connect to a Hugging Face repository for the model.
+    """
+    create_repo(repo_name, exist_ok=True, private=True)
+    repo = Repository(
+        local_dir=output_dir,
+        clone_from=repo_name,
+        use_auth_token=True,
+    )
+    return repo
+
+
+def evaluate(model, eval_dataloader, device):
+    """
+    Evaluate the model on the validation set.
+    """
+    model.eval()
+    total_loss = 0
+    with torch.no_grad():
+        for batch in eval_dataloader:
+            input_ids = batch["input_ids"].to(device)
+            labels = batch["labels"].to(device)
+            outputs = model(input_ids=input_ids, labels=labels)
+            total_loss += outputs.loss.item()
+    avg_loss = total_loss / len(eval_dataloader)
+    perplexity = torch.exp(torch.tensor(avg_loss))
+    return avg_loss, perplexity.item()
+
+
+def num_parameters(model):
+    """
+    Count the number of parameters in the model.
     """
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-def evaluate(model, eval_dataloader, accelerator, loss_fn):
-    """
-    Evaluate the model on the validation set
-    """
-    model.eval()
-    losses = []
-    for step, batch in enumerate(eval_dataloader):
-        with torch.no_grad():
-            input_batch = batch["input_ids"]
-            target_batch = batch["labels"]
-            outputs = calc_loss_batch(input_batch, target_batch, model, loss_fn)
-            losses.append(outputs.item())
-
-        losses.append(accelerator.gather(outputs.loss))
-    loss = torch.mean(torch.cat(losses))
-    try:
-        perplexity = torch.exp(loss)
-    except OverflowError:
-        perplexity = float("inf")
-    return loss.item(), perplexity.item()
-
-
-def calc_loss_batch(input_batch, target_batch, model, loss_fn):
-    """Calculate loss for a single batch."""
-    logits = model(input_batch)
-    loss = loss_fn(logits.view(-1, logits.size(-1)), target_batch.view(-1))
-    return loss
-
-
 def train(
+    args,
     model,
-    loss_fn,
-    num_train_epochs,
+    tokenizer,
     train_dataloader,
     eval_dataloader,
-    accelerator,
     optimizer,
     lr_scheduler,
-    output_dir="./results",
+    device,
+    repo,
 ):
-    gradient_accumulation_steps = 8
-    eval_steps = 5_000
-    num_training_steps = 5000
+    """
+    Train the model on a single GPU.
+    """
+
+    # Training loop
+    gradient_accumulation_steps = args.gradient_accumulation_steps
+    completed_steps = 0
 
     model.train()
-    completed_steps = 0
-    for epoch in range(num_train_epochs):
-        for step, batch in tqdm(
-            enumerate(train_dataloader, start=1), total=num_training_steps
+    for epoch in range(args.num_train_epochs):
+        for step, batch in enumerate(
+            tqdm(train_dataloader, total=args.max_train_steps), start=1
         ):
-            input_batch = batch["input_ids"]
-            target_batch = batch["labels"]
-            loss = calc_loss_batch(input_batch, target_batch, model, loss_fn)
+
+            input_ids = batch["input_ids"].to(device)
+            labels = batch["labels"].to(device)
+
+            outputs = model(input_ids=input_ids, labels=labels)
+            loss = outputs.loss
+            loss = loss / gradient_accumulation_steps
+            loss.backward()
 
             if step % 100 == 0:
-                accelerator.print(
-                    {
-                        "steps": completed_steps,
-                        "loss/train": loss.item() * gradient_accumulation_steps,
-                    }
+                tqdm.write(
+                    f"> step {step} | loss/train: {loss.item():.4f} | lr: {optimizer.param_groups[0]['lr']:.6f}"
                 )
-            loss = loss / gradient_accumulation_steps
-            accelerator.backward(loss)
+
             if step % gradient_accumulation_steps == 0:
-                accelerator.clip_grad_norm_(model.parameters(), 1.0)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad()
                 completed_steps += 1
-            if (step % (eval_steps * gradient_accumulation_steps)) == 0:
-                eval_loss, perplexity = evaluate(
-                    model, eval_dataloader, accelerator, loss_fn
+
+            if (step % (args.eval_steps * gradient_accumulation_steps)) == 0:
+                eval_loss, perplexity = evaluate(model, eval_dataloader, device)
+                tqdm.write(
+                    f"> loss/eval: {eval_loss:.4f} | perplexity: {perplexity:.2f}"
                 )
-                accelerator.print({"loss/eval": eval_loss, "perplexity": perplexity})
                 model.train()
-                accelerator.wait_for_everyone()
-                unwrapped_model = accelerator.unwrap_model(model)
-                unwrapped_model.save_pretrained(
-                    output_dir, save_function=accelerator.save
+
+                # Save model and tokenizer to the Hugging Face Hub and output directory
+                os.makedirs(args.output_dir, exist_ok=True)
+                model.save_pretrained(args.output_dir)
+                tokenizer.save_pretrained(args.output_dir)
+                repo.push_to_hub(
+                    commit_message=f"Training in progress step {step}", blocking=False
                 )
-                if accelerator.is_main_process:
-                    tokenizer.save_pretrained(output_dir)
-                    # repo.push_to_hub(
-                    #     commit_message=f"Training in progress step {step}",
-                    #     blocking=False,
-                    # )
+
+        # Save model
+        os.makedirs(args.output_dir, exist_ok=True)
+        model.save_pretrained(args.output_dir)
+        tokenizer.save_pretrained(args.output_dir)
 
 
-def get_llama_config(config):
-    return LlamaConfig(
-        vocab_size=config.vocab_size,
-        hidden_size=config.hidden_size,
-        num_hidden_layers=config.num_decoder_layers,
-        num_attention_heads=config.num_attention_heads,
-        intermediate_size=config.hidden_size * 4,
-        max_position_embeddings=config.block_size,
-        layer_norm_eps=config.rms_norm_eps,
-        rope_theta=config.rope_theta,
-        attention_dropout=config.attention_dropout,
-        dropout=config.dropout,
-        device_map="auto",
-        gradient_checkpointing=True,
+def main(args):
+    """
+    Main function to train the Llama model on a single GPU.
+    """
+    # Setting the HF repo
+    repo = get_hf_repo(args.repo_name, args.output_dir)
+
+    # Setup the device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Load dataset and tokenizer
+    train_dataset, val_dataset = get_dataset(args.dataset_name, args.cache_dir)
+    tokenizer = Tokenizer(args.tokenizer_name).get_tokenizer()
+    block_size = args.block_size
+
+    # Create dataloaders
+    collate_fn = CollateFn(tokenizer, block_size)
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=args.train_batch_size,
+        collate_fn=collate_fn,
+        shuffle=True,
+    )
+    eval_dataloader = DataLoader(
+        val_dataset, batch_size=args.eval_batch_size, collate_fn=collate_fn
     )
 
-
-def main():
-    # Load the dataset
-    dataset_name = "MaxLSB/French-TinyStories"  # Change the name
-    tokenizer_name = "gpt2"  # Maybe use a french tokenizer ?
-    num_train_epochs = 1
-    num_update_steps_per_epoch = 10**6 / 32
-    num_training_steps = 10**6 / 32
-
-    # Get the model config
-    config = ModelConfig()
-
-    # Load the datasets
-    ds_train, ds_valid = get_dataset(dataset_name)
-    # Load the tokenizer
-    global tokenizer
-    tokenizer = Tokenizer().ready_tokenizer()
-
-    # Initialize the model with the llama config
+    # Model configuration
+    config = ModelConfig_3M()
     llama_config = get_llama_config(config)
-    model = LlamaForCausalLM(llama_config)
+    model = LlamaForCausalLM(llama_config).to(device)
 
-    # Print the number of parameters
-    print(f"Model has {get_num_params(model)} parameters")
-
-    # Instanciate the dataloaders
-    train_dataloader = get_dataloader(
-        "train",
-        ds_train,
-        batch_size=32,
-    )
-    eval_dataloader = get_dataloader(
-        "validation",
-        ds_valid,
-        batch_size=32,
-    )
-    # Instantiate the accelerator
-    accelerator = Accelerator(fp16=True)
-
-    # Instanciate the loss and the optimizer
-    loss_fn = torch.nn.CrossEntropyLoss(reduce=False)
-    optimizer = AdamW(model.parameters(), lr=5e-4)
-
-    # Prepare the model, optimizer and dataloaders
-    model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
-        model, optimizer, train_dataloader, eval_dataloader
-    )
-
+    # Optimizer and scheduler
+    optimizer = AdamW(model.parameters(), lr=args.learning_rate)
     lr_scheduler = get_scheduler(
         name="linear",
         optimizer=optimizer,
-        num_warmup_steps=1_000,
-        num_training_steps=num_training_steps,
+        num_warmup_steps=args.num_warmup_steps,
+        num_training_steps=args.max_train_steps,
     )
 
-    # Train the model
+    print(f"> Training {num_parameters(model) / 1e6:.2f}M parameters")
+
     train(
+        args,
         model,
-        loss_fn,
-        num_train_epochs,
+        tokenizer,
         train_dataloader,
         eval_dataloader,
-        accelerator,
         optimizer,
         lr_scheduler,
+        device,
+        repo,
     )
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Train a Llama-based model on a single GPU."
+    )
+    parser.add_argument("--repo_name", type=str, default="MaxLSB/LeCarnet-3M")
+    parser.add_argument("--dataset_name", type=str, default="MaxLSB/LeCarnet")
+    parser.add_argument("--tokenizer_name", type=str, default="openai-community/gpt2")
+    parser.add_argument("--output_dir", type=str, default="checkpoints/")
+    parser.add_argument("--cache_dir", type=str, default="cache/")
+    parser.add_argument("--eval_steps", type=int, default=100)
+    parser.add_argument("--num_train_epochs", type=int, default=1)
+    parser.add_argument("--train_batch_size", type=int, default=8)
+    parser.add_argument("--eval_batch_size", type=int, default=8)
+    parser.add_argument("--learning_rate", type=float, default=5e-4)
+    parser.add_argument("--num_warmup_steps", type=int, default=1000)
+    parser.add_argument("--max_train_steps", type=int, default=5000)
+    parser.add_argument("--gradient_accumulation_steps", type=int, default=8)
+    parser.add_argument("--block_size", type=int, default=None)
+    args = parser.parse_args()
+    main(args)
