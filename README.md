@@ -14,7 +14,13 @@ make env
 ```
 That's it, you can now run any command you want!
 
-## Data Generation Commands
+## Training
+
+| Task                          | Make Command           | Equivalent CLI Command                                                                                                                                               |
+|-------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Training    | `make train` | `python src/train/train.py `                                                |
+
+## Data Generation
 For Generation tasks set your API key (for translation the model runs locally):
 
 **Linux/MacOS:**
