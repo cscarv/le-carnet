@@ -41,7 +41,8 @@ PYTHON_PACKAGES = \
     accelerate==1.5.1 \
     bitsandbytes==0.45.4 \
     mistralai==1.7.0 \
-    jsonlines==4.0.0
+    jsonlines==4.0.0 \
+    wandb
 
 .PHONY: generate-mistral generate-openai translate env push-dataset train
 
