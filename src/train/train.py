@@ -1,6 +1,7 @@
 import argparse
 import os
 import torch
+import wandb
 from huggingface_hub import Repository, create_repo
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
@@ -95,19 +96,19 @@ def get_hf_repo(repo_name: str, output_dir: str) -> Repository:
     return repo
 
 
-def evaluate(model, eval_dataloader, device):
+def evaluate(model, val_dataloader, device):
     """
     Evaluate the model on the validation set.
     """
     model.eval()
     total_loss = 0
     with torch.no_grad():
-        for batch in eval_dataloader:
+        for batch in val_dataloader:
             input_ids = batch["input_ids"].to(device)
             labels = batch["labels"].to(device)
             outputs = model(input_ids=input_ids, labels=labels)
             total_loss += outputs.loss.item()
-    avg_loss = total_loss / len(eval_dataloader)
+    avg_loss = total_loss / len(val_dataloader)
     perplexity = torch.exp(torch.tensor(avg_loss))
     return avg_loss, perplexity.item()
 
@@ -124,7 +125,7 @@ def train(
     model,
     tokenizer,
     train_dataloader,
-    eval_dataloader,
+    val_dataloader,
     optimizer,
     lr_scheduler,
     device,
@@ -136,7 +137,6 @@ def train(
 
     # Training loop
     gradient_accumulation_steps = args.gradient_accumulation_steps
-    completed_steps = 0
 
     model.train()
     for epoch in range(args.num_train_epochs):
@@ -156,19 +156,20 @@ def train(
                 tqdm.write(
                     f"> step {step} | loss/train: {loss.item():.4f} | lr: {optimizer.param_groups[0]['lr']:.6f}"
                 )
+                wandb.log({"train_loss": loss.item(), "learning_rate": optimizer.param_groups[0]["lr"]})
 
             if step % gradient_accumulation_steps == 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad()
-                completed_steps += 1
 
             if (step % (args.eval_steps * gradient_accumulation_steps)) == 0:
-                eval_loss, perplexity = evaluate(model, eval_dataloader, device)
+                val_loss, perplexity = evaluate(model, val_dataloader, device)
                 tqdm.write(
-                    f"> loss/eval: {eval_loss:.4f} | perplexity: {perplexity:.2f}"
+                    f"> loss/val: {val_loss:.4f} | perplexity: {perplexity:.2f}"
                 )
+                wandb.log({"val_loss": val_loss, "perplexity": perplexity})
                 model.train()
 
                 # Save model and tokenizer to the Hugging Face Hub and output directory
@@ -194,6 +195,9 @@ def main(args):
 
     # Setup the device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    # Initialize wandb
+    wandb.init(project="LeCarnet", name="le-carnet-training-run")
 
     # Load dataset and tokenizer
     train_dataset, val_dataset = get_dataset(args.dataset_name, args.cache_dir)
@@ -208,7 +212,7 @@ def main(args):
         collate_fn=collate_fn,
         shuffle=True,
     )
-    eval_dataloader = DataLoader(
+    val_dataloader = DataLoader(
         val_dataset, batch_size=args.eval_batch_size, collate_fn=collate_fn
     )
 
@@ -233,12 +237,14 @@ def main(args):
         model,
         tokenizer,
         train_dataloader,
-        eval_dataloader,
+        val_dataloader,
         optimizer,
         lr_scheduler,
         device,
         repo,
     )
+    
+    wandb.finish()
 
 
 if __name__ == "__main__":
