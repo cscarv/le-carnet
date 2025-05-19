@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 from tqdm import tqdm
 import torch
+import platform
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig
 from datasets import load_dataset
 from torch.utils.data import DataLoader
@@ -99,15 +100,21 @@ def main(args):
     tokenizer.padding_side = "right"
     print(f"> Loaded tokenizer: {args.model_name}")
 
-    bnb_config = BitsAndBytesConfig(
-        load_in_8bit=True,
-        llm_int8_enable_fp32_cpu_offload=True,
-    )
+    quantization_config = None
+    if platform.system() != "Darwin":
+        quantization_config = BitsAndBytesConfig(
+            load_in_8bit=True,
+            llm_int8_enable_fp32_cpu_offload=True,
+        )
+        print("> Using bitsandbytes 8-bit quantization")
+    else:
+        print("> Skipping bitsandbytes quantization")
+    
     model = AutoModelForSeq2SeqLM.from_pretrained(
         args.model_name,
         device_map="auto",
         torch_dtype=torch.float16,
-        quantization_config=bnb_config,
+        quantization_config=quantization_config,
     )
     model = torch.compile(model)
     print(f"> Loaded model: {args.model_name}")

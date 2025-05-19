@@ -9,8 +9,14 @@ This dataset was created by synthetically generating French short stories using 
 
 ## Quick Setup
 
+_Using [`uv`](https://github.com/astral-sh/uv) for fast and reliable dependency management._
+
 ```bash
+# Basic environment setup
 make env
+
+# Basic environment setup (for GPUs)
+make env-gpu
 ```
 That's it, you can now run any command you want!
 
