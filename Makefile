@@ -23,7 +23,7 @@ REPO_NAME            ?= MaxLSB/LeCarnet
 env:
 	@command -v uv >/dev/null 2>&1 || { \
 		echo "Installing uv..."; \
-		curl -sSf https://astral.sh/uv/install.sh | sh; \
+		curl -LsSf https://astral.sh/uv/install.sh | sh; \
 	}
 	@echo "Setting up environment..."
 	@uv sync --python $(PYTHON_VERSION)
@@ -31,7 +31,7 @@ env:
 
 
 env-gpu: env
-	@uv pip install .[gpu]
+	@uv sync --extra gpu
 
 generate-mistral:
 	$(PYTHON) $(MISTRAL_SCRIPT) \
