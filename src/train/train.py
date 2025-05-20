@@ -13,7 +13,7 @@ from transformers import (
     LlamaForCausalLM,
     get_scheduler,
 )
-
+from utils import num_parameters, generate_text
 from config import ModelConfig_3M
 
 
@@ -110,20 +110,15 @@ def evaluate(model, val_dataloader, device):
             total_loss += outputs.loss.item()
     avg_loss = total_loss / len(val_dataloader)
     perplexity = torch.exp(torch.tensor(avg_loss))
+    model.train()
     return avg_loss, perplexity.item()
-
-
-def num_parameters(model):
-    """
-    Count the number of parameters in the model.
-    """
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 def train(
     args,
     model,
     tokenizer,
+    loss_fn,
     train_dataloader,
     val_dataloader,
     optimizer,
@@ -134,43 +129,56 @@ def train(
     """
     Train the model on a single GPU.
     """
-
     # Training loop
     gradient_accumulation_steps = args.gradient_accumulation_steps
+    completed_steps = 0
+    start_context = "Il était une fois"
+    pbar = tqdm(total=args.max_train_steps)
 
     model.train()
     for epoch in range(args.num_train_epochs):
-        for step, batch in enumerate(
-            tqdm(train_dataloader, total=args.max_train_steps), start=1
-        ):
-
+        for step, batch in enumerate(train_dataloader, start=1):
             input_ids = batch["input_ids"].to(device)
             labels = batch["labels"].to(device)
-
-            outputs = model(input_ids=input_ids, labels=labels)
-            loss = outputs.loss
+            attention_mask = batch["attention_mask"].to(device)
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            logits = outputs.logits
+            loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
             loss = loss / gradient_accumulation_steps
             loss.backward()
 
             if step % 100 == 0:
                 tqdm.write(
-                    f"> step {step} | loss/train: {loss.item():.4f} | lr: {optimizer.param_groups[0]['lr']:.6f}"
+                    f"step {completed_steps} | loss/train: {loss.item() * gradient_accumulation_steps:.4f} | lr: {optimizer.param_groups[0]['lr']:.6f}"
                 )
-                wandb.log({"train_loss": loss.item(), "learning_rate": optimizer.param_groups[0]["lr"]})
 
             if step % gradient_accumulation_steps == 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad()
+                completed_steps += 1
+                pbar.update(1)
+                wandb.log(
+                    {
+                        "train_loss": loss.item() * gradient_accumulation_steps,
+                        "learning_rate": optimizer.param_groups[0]["lr"],
+                    }
+                )
 
             if (step % (args.eval_steps * gradient_accumulation_steps)) == 0:
                 val_loss, perplexity = evaluate(model, val_dataloader, device)
-                tqdm.write(
-                    f"> loss/val: {val_loss:.4f} | perplexity: {perplexity:.2f}"
-                )
+                tqdm.write(f"loss/val: {val_loss:.4f} | perplexity: {perplexity:.2f}")
                 wandb.log({"val_loss": val_loss, "perplexity": perplexity})
-                model.train()
+
+                # Generate text for evaluation
+                generated_text = generate_text(
+                    model,
+                    tokenizer,
+                    context_size=args.block_size,
+                    start_context=start_context,
+                )
+                print(f"Generated sample: {generated_text}")
 
                 # Save model and tokenizer to the Hugging Face Hub and output directory
                 os.makedirs(args.output_dir, exist_ok=True)
@@ -179,6 +187,8 @@ def train(
                 repo.push_to_hub(
                     commit_message=f"Training in progress step {step}", blocking=False
                 )
+
+        pbar.close()
 
         # Save model
         os.makedirs(args.output_dir, exist_ok=True)
@@ -191,21 +201,28 @@ def main(args):
     Main function to train the Llama model on a single GPU.
     """
     # Setting the HF repo
+    if not os.getenv("HF_TOKEN"):
+        raise ValueError(
+            "Please set the HF_TOKEN environment variable to your Hugging Face token."
+        )
     repo = get_hf_repo(args.repo_name, args.output_dir)
 
-    # Setup the device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
     # Initialize wandb
     wandb.init(project="LeCarnet", name="le-carnet-training-run")
 
+    # Setup the device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+
     # Load dataset and tokenizer
     train_dataset, val_dataset = get_dataset(args.dataset_name, args.cache_dir)
+    print(
+        f"Loaded {len(train_dataset)} training samples and {len(val_dataset)} validation samples"
+    )
     tokenizer = Tokenizer(args.tokenizer_name).get_tokenizer()
-    block_size = args.block_size
 
     # Create dataloaders
-    collate_fn = CollateFn(tokenizer, block_size)
+    collate_fn = CollateFn(tokenizer, args.block_size)
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=args.train_batch_size,
@@ -221,7 +238,8 @@ def main(args):
     llama_config = get_llama_config(config)
     model = LlamaForCausalLM(llama_config).to(device)
 
-    # Optimizer and scheduler
+    # Define Loss, Optimizer and scheduler
+    loss_fn = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
     optimizer = AdamW(model.parameters(), lr=args.learning_rate)
     lr_scheduler = get_scheduler(
         name="linear",
@@ -230,12 +248,13 @@ def main(args):
         num_training_steps=args.max_train_steps,
     )
 
-    print(f"> Training {num_parameters(model) / 1e6:.2f}M parameters")
-
+    print(f"Training {num_parameters(model) / 1e6:.2f}M parameters")
+    print("Starting training...")
     train(
         args,
         model,
         tokenizer,
+        loss_fn,
         train_dataloader,
         val_dataloader,
         optimizer,
@@ -243,7 +262,7 @@ def main(args):
         device,
         repo,
     )
-    
+
     wandb.finish()
 
 
@@ -256,14 +275,14 @@ if __name__ == "__main__":
     parser.add_argument("--tokenizer_name", type=str, default="openai-community/gpt2")
     parser.add_argument("--output_dir", type=str, default="checkpoints/")
     parser.add_argument("--cache_dir", type=str, default="cache/")
-    parser.add_argument("--eval_steps", type=int, default=100)
+    parser.add_argument("--eval_steps", type=int, default=500)
     parser.add_argument("--num_train_epochs", type=int, default=1)
-    parser.add_argument("--train_batch_size", type=int, default=8)
-    parser.add_argument("--eval_batch_size", type=int, default=8)
+    parser.add_argument("--gradient_accumulation_steps", type=int, default=4)
+    parser.add_argument("--train_batch_size", type=int, default=16)
+    parser.add_argument("--eval_batch_size", type=int, default=16)
     parser.add_argument("--learning_rate", type=float, default=5e-4)
-    parser.add_argument("--num_warmup_steps", type=int, default=1000)
-    parser.add_argument("--max_train_steps", type=int, default=5000)
-    parser.add_argument("--gradient_accumulation_steps", type=int, default=8)
-    parser.add_argument("--block_size", type=int, default=None)
+    parser.add_argument("--num_warmup_steps", type=int, default=800)
+    parser.add_argument("--max_train_steps", type=int, default=10000)
+    parser.add_argument("--block_size", type=int, default=512)
     args = parser.parse_args()
     main(args)

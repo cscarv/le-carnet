@@ -117,7 +117,7 @@ def generate_stories(
         save_stories_to_jsonl(stories, output_file)
 
     elapsed = time.time() - start
-    tqdm.write(f"> {total_requests} stories generated in {elapsed:.2f} seconds.")
+    tqdm.write(f"{total_requests} stories generated in {elapsed:.2f} seconds.")
 
 
 def generate_output_file(model_name: str, output_dir: str) -> str:

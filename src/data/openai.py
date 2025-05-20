@@ -123,7 +123,7 @@ async def generate_batches(
         stories_generated += len(batch_output)
 
     elapsed = time.time() - start
-    tqdm.write(f"> {stories_generated} stories generated in {elapsed:.2f} seconds.")
+    tqdm.write(f"{stories_generated} stories generated in {elapsed:.2f} seconds.")
 
 
 def generate_output_file(output_dir, model_name: str) -> str:

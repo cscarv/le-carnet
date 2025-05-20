@@ -64,10 +64,10 @@ def translate_split(
     if out_file.exists():
         with jsonlines.open(out_file, mode="r") as reader:
             start_idx = sum(1 for _ in reader)
-        print(f"> Resuming from sample #{start_idx}")
+        print(f"Resuming from sample #{start_idx}")
 
     if start_idx >= len(dataset):
-        print(f"> All {len(dataset)} samples already processed—skipping.")
+        print(f"All {len(dataset)} samples already processed—skipping.")
         return
 
     dataset = dataset.select(range(start_idx, len(dataset)))
@@ -82,7 +82,7 @@ def translate_split(
             for text in translated:
                 writer.write({"text": text})
 
-    print(f"> Saved {len(dataset)} more translations to {out_file}")
+    print(f"Saved {len(dataset)} more translations to {out_file}")
 
 
 def main(args):
@@ -92,13 +92,13 @@ def main(args):
     dataset_name = "roneneldan/TinyStories"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"> Using device: {device}")
+    print(f"Using device: {device}")
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     tokenizer.src_lang = "eng_Latn"
     tokenizer.tgt_lang = "fra_Latn"
     tokenizer.padding_side = "right"
-    print(f"> Loaded tokenizer: {args.model_name}")
+    print(f"Loaded tokenizer: {args.model_name}")
 
     quantization_config = None
     if platform.system() != "Darwin":
@@ -106,10 +106,10 @@ def main(args):
             load_in_8bit=True,
             llm_int8_enable_fp32_cpu_offload=True,
         )
-        print("> Using bitsandbytes 8-bit quantization")
+        print("Using bitsandbytes 8-bit quantization")
     else:
-        print("> Skipping bitsandbytes quantization")
-    
+        print("Skipping bitsandbytes quantization")
+
     model = AutoModelForSeq2SeqLM.from_pretrained(
         args.model_name,
         device_map="auto",
@@ -117,7 +117,7 @@ def main(args):
         quantization_config=quantization_config,
     )
     model = torch.compile(model)
-    print(f"> Loaded model: {args.model_name}")
+    print(f"Loaded model: {args.model_name}")
     model.eval()
 
     translate_split(
