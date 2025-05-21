@@ -6,6 +6,7 @@ OPENAI_SCRIPT        := src/data/openai.py
 TRANSLATE_SCRIPT     := src/data/translate.py
 PUSH_TO_HF_SCRIPT    := src/data/push_to_hf.py
 TRAIN_SCRIPT         := src/train/train.py
+INFERENCE_SCRIPT     := src/inference/inference.py
 
 # Data generation parameters
 MISTRAL_MODEL        ?= mistral-small-2501
@@ -77,7 +78,7 @@ train:
 
 
 inference:
-	$(PYTHON) src/inference.py \
+	$(PYTHON) $(INFERENCE_SCRIPT) \
 		--model_name $(MODEL_NAME) \
 		--prompt "$(PROMPT)" \
 		--max_new_tokens $(MAX_NEW_TOKENS)
