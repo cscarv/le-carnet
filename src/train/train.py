@@ -96,7 +96,21 @@ def get_hf_repo(repo_name: str, output_dir: str) -> Repository:
     return repo
 
 
-def evaluate(model, val_dataloader, device):
+def compute_batch_loss(model, batch, loss_fn, device):
+    """
+    Compute the loss for a batch of data.
+    """
+    input_ids = batch["input_ids"].to(device)
+    labels = batch["labels"].to(device)
+    attention_mask = batch["attention_mask"].to(device)
+    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+    logits = outputs.logits
+    loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
+
+    return loss
+
+
+def evaluate(model, loss_fn, val_dataloader, device):
     """
     Evaluate the model on the validation set.
     """
@@ -104,10 +118,8 @@ def evaluate(model, val_dataloader, device):
     total_loss = 0
     with torch.no_grad():
         for batch in val_dataloader:
-            input_ids = batch["input_ids"].to(device)
-            labels = batch["labels"].to(device)
-            outputs = model(input_ids=input_ids, labels=labels)
-            total_loss += outputs.loss.item()
+            loss = compute_batch_loss(model, batch, loss_fn, device)
+            total_loss += loss.item()
     avg_loss = total_loss / len(val_dataloader)
     perplexity = torch.exp(torch.tensor(avg_loss))
     model.train()
@@ -138,12 +150,7 @@ def train(
     model.train()
     for epoch in range(args.num_train_epochs):
         for step, batch in enumerate(train_dataloader, start=1):
-            input_ids = batch["input_ids"].to(device)
-            labels = batch["labels"].to(device)
-            attention_mask = batch["attention_mask"].to(device)
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            logits = outputs.logits
-            loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
+            loss = compute_batch_loss(model, batch, loss_fn, device)
             loss = loss / gradient_accumulation_steps
             loss.backward()
 
@@ -167,7 +174,7 @@ def train(
                 )
 
             if (step % (args.eval_steps * gradient_accumulation_steps)) == 0:
-                val_loss, perplexity = evaluate(model, val_dataloader, device)
+                val_loss, perplexity = evaluate(model, loss_fn, val_dataloader, device)
                 tqdm.write(f"loss/val: {val_loss:.4f} | perplexity: {perplexity:.2f}")
                 wandb.log({"val_loss": val_loss, "perplexity": perplexity})
 
