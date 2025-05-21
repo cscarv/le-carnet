@@ -137,6 +137,7 @@ def train(
     lr_scheduler,
     device,
     repo,
+    output_dir,
 ):
     """
     Train the model on a single GPU.
@@ -188,9 +189,9 @@ def train(
                 print(f"Generated sample: {generated_text}")
 
                 # Save model and tokenizer to the Hugging Face Hub and output directory
-                os.makedirs(args.output_dir, exist_ok=True)
-                model.save_pretrained(args.output_dir)
-                tokenizer.save_pretrained(args.output_dir)
+                os.makedirs(output_dir, exist_ok=True)
+                model.save_pretrained(output_dir)
+                tokenizer.save_pretrained(output_dir)
                 repo.push_to_hub(
                     commit_message=f"Training in progress step {step}", blocking=False
                 )
@@ -198,21 +199,24 @@ def train(
         pbar.close()
 
         # Save model
-        os.makedirs(args.output_dir, exist_ok=True)
-        model.save_pretrained(args.output_dir)
-        tokenizer.save_pretrained(args.output_dir)
+        os.makedirs(output_dir, exist_ok=True)
+        model.save_pretrained(output_dir)
+        tokenizer.save_pretrained(output_dir)
 
 
 def main(args):
     """
     Main function to train the Llama model on a single GPU.
     """
+    # Set the output directory
+    output_dir = os.path.join(args.output_dir, args.repo_name.split("/")[-1])
+
     # Setting the HF repo
     if not os.getenv("HF_TOKEN"):
         raise ValueError(
             "Please set the HF_TOKEN environment variable to your Hugging Face token."
         )
-    repo = get_hf_repo(args.repo_name, args.output_dir)
+    repo = get_hf_repo(args.repo_name, output_dir)
 
     # Initialize wandb
     wandb.init(project="LeCarnet", name="le-carnet-training-run")
@@ -268,6 +272,7 @@ def main(args):
         lr_scheduler,
         device,
         repo,
+        output_dir,
     )
 
     wandb.finish()
@@ -288,7 +293,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_batch_size", type=int, default=16)
     parser.add_argument("--eval_batch_size", type=int, default=16)
     parser.add_argument("--learning_rate", type=float, default=5e-4)
-    parser.add_argument("--num_warmup_steps", type=int, default=800)
+    parser.add_argument("--num_warmup_steps", type=int, default=500)
     parser.add_argument("--max_train_steps", type=int, default=10000)
     parser.add_argument("--block_size", type=int, default=512)
     args = parser.parse_args()

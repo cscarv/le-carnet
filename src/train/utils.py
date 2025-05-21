@@ -24,7 +24,7 @@ def generate_text(
     tokenizer,
     context_size,
     start_context,
-    max_new_tokens=50,
+    max_new_tokens=100,
     k=10,
     temperature=0.7,
 ):
@@ -51,7 +51,7 @@ def generate_text(
     return cleaned_text
 
 
-def sample_next_token(logits, k=10, temperature=0.8):
+def sample_next_token(logits, k=10, temperature=0.7):
     """
     Sample the next token from the model's logits using top-k sampling.
     """

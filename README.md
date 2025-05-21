@@ -20,11 +20,14 @@ make env-gpu
 ```
 That's it, you can now run any command you want!
 
-## Training
+## Training & Inference
 
 | Task                          | Make Command           | Equivalent CLI Command                                                                                                                                               |
 |-------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Training    | `make train` | `python src/train/train.py `                                                |
+| Training | `make train` | `python src/train/train.py --dataset_name MaxLSB/LeCarnet --train_batch_size 16 --gradient_accumulation_steps 4 --learning_rate 5e-4 --max_train_steps 10000`                                                |
+| Inference   | `make inference` | `python src/inference/inference.py --model_name MaxLSB/LeCarnet-3M --prompt "Il était une fois" --max_new_tokens 256`                                                |
+
+_Not all arguments are listed here._
 
 ## Data Generation
 For Generation tasks set your API key (for translation the model runs locally):
@@ -46,10 +49,12 @@ $env:OPENAI_API_KEY="your_api_key"
 
 | Task                          | Make Command           | Equivalent CLI Command                                                                                                                                               |
 |-------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Generate Stories with Mistral    | `make generate-mistral` | `python src/data/mistral.py --model_name mistral-small-2501 --total_requests 512`                                                |
-| Generate Stories with OpenAI       | `make generate-openai`  | `python src/data/openai.py --base_url https://api.openai.com/v1/chat/completions --model_name gpt-3.5-turbo --total_requests 512` |
+| Generate with Mistral    | `make generate-mistral` | `python src/data/mistral.py --model_name mistral-small-2501 --total_requests 512`                                                |
+| Generate with OpenAI       | `make generate-openai`  | `python src/data/openai.py --base_url https://api.openai.com/v1/chat/completions --model_name gpt-3.5-turbo --total_requests 512` |
 | Translate TinyStories Dataset | `make translate`        | `python src/data/translation.py --split train --model_name facebook/nllb-200-distilled-600M --batch_size 32 `                              |
 | Push Dataset to HF | `make push-dataset`        | `python src/data/push_to_hf.py --folder_path ./backup/ --repo_name MaxLSB/LeCarnet`                   |
+
+_Not all arguments are listed here._
 
 # References
 

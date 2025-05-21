@@ -7,6 +7,7 @@ TRANSLATE_SCRIPT     := src/data/translate.py
 PUSH_TO_HF_SCRIPT    := src/data/push_to_hf.py
 TRAIN_SCRIPT         := src/train/train.py
 
+# Data generation parameters
 MISTRAL_MODEL        ?= mistral-small-2501
 MISTRAL_REQUESTS     ?= 100000
 OPENAI_BASE_URL      ?= https://api.openai.com/v1/chat/completions
@@ -18,7 +19,18 @@ BATCH_SIZE           ?= 32
 FOLDER_PATH          ?= ./backup/
 REPO_NAME            ?= MaxLSB/LeCarnet
 
-.PHONY: env generate-mistral generate-openai translate push-dataset train
+# Train and inference parameters
+MODEL_NAME	?= LeCarnet-3M
+PROMPT ?= Il était une fois 
+MAX_NEW_TOKENS ?= 256
+DATASET_NAME ?= MaxLSB/LeCarnet
+TRAIN_BATCH_SIZE ?= 16
+GRADIENT_ACCUMULATION_STEPS ?= 4
+LEARNING_RATE ?= 5e-4
+MAX_TRAIN_STEPS ?= 10000
+
+
+.PHONY: env generate-mistral generate-openai translate push-dataset train inference
 
 env:
 	@command -v uv >/dev/null 2>&1 || { \
@@ -57,3 +69,15 @@ push-dataset:
 
 train:
 	$(PYTHON) $(TRAIN_SCRIPT)
+		--dataset_name $(DATASET_NAME) \
+		--train_batch_size $(TRAIN_BATCH_SIZE) \
+		--gradient_accumulation_steps $(GRADIENT_ACCUMULATION_STEPS) \
+		--learning_rate $(LEARNING_RATE) \
+		--max_train_steps $(MAX_TRAIN_STEPS)
+
+
+inference:
+	$(PYTHON) src/inference.py \
+		--model_name $(MODEL_NAME) \
+		--prompt "$(PROMPT)" \
+		--max_new_tokens $(MAX_NEW_TOKENS)
