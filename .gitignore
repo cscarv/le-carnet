@@ -11,3 +11,4 @@ __pycache__/
 *checkpoints/
 *.lock
 wandb/
+mistral_api_key.txt
