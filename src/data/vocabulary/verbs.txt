@@ -104,7 +104,6 @@ sentir
 serrer
 se coucher
 se moucher
-se peigner
 se tromper
 se fâcher
 se moquer
@@ -398,11 +397,7 @@ tourbillonner
 tricoter
 trotter
 vaciller
-zigzaguer
-zébrer
-zapper
 zoom
-zézayer
 briser
 balayer
 baver
@@ -449,5 +444,3 @@ charger
 clignoter
 jeter
 peigner
-se cacher
-se lever

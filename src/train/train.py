@@ -293,7 +293,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_batch_size", type=int, default=16)
     parser.add_argument("--eval_batch_size", type=int, default=16)
     parser.add_argument("--learning_rate", type=float, default=5e-4)
-    parser.add_argument("--num_warmup_steps", type=int, default=500)
+    parser.add_argument("--num_warmup_steps", type=int, default=200)
     parser.add_argument("--max_train_steps", type=int, default=10000)
     parser.add_argument("--block_size", type=int, default=512)
     args = parser.parse_args()

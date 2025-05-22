@@ -454,7 +454,6 @@ couronne
 cape
 potion
 livre
-clé magique
 plume
 graine
 écorce
@@ -473,15 +472,12 @@ bulle
 bois
 chuchotement
 grain
-oiseau bleu
 queue
 patte
 pelage
-nez rouge
 gant
 botte
 poche
-ciel bleu
 parapluie
 cloche
 cadeau
@@ -501,12 +497,10 @@ grimace
 joue
 saut
 glissade
-bulle de savon
 tour
 copain
 copine
 ami
-papillon doré
 balade
 musique
 champ
