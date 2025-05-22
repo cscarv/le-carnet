@@ -14,12 +14,14 @@ def load_data(file_path: str) -> List[Dict]:
     """
     data = []
     with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-        for raw_line in f:
+        for line_number, raw_line in enumerate(f, 1):
+            line = raw_line.strip()
             try:
-                record = json.loads(raw_line)
-            except JSONDecodeError:
+                record = json.loads(line)
+                data.append(record)
+            except JSONDecodeError as e:
+                print(f"Line {line_number}: JSONDecodeError: {e}")
                 continue
-            data.append(record)
     return data
 
 
@@ -84,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--folder_path",
         type=str,
-        default="./backup/",
+        default="backup/",
         help="Path to the folder containing the JSONL files.",
     )
     parser.add_argument(

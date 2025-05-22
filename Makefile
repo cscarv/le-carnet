@@ -76,7 +76,6 @@ train:
 		--learning_rate $(LEARNING_RATE) \
 		--max_train_steps $(MAX_TRAIN_STEPS)
 
-
 inference:
 	$(PYTHON) $(INFERENCE_SCRIPT) \
 		--model_name $(MODEL_NAME) \
