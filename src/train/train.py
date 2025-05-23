@@ -276,7 +276,7 @@ def main(args):
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
     optimizer = AdamW(model.parameters(), lr=train_config.learning_rate)
     lr_scheduler = get_scheduler(
-        name="linear",
+        name="cosine",
         optimizer=optimizer,
         num_warmup_steps=train_config.num_warmup_steps,
         num_training_steps=train_config.max_train_steps,
