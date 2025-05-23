@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_name",
         type=str,
-        default="MaxLSB/LeCarnet-3M",
+        default="MaxLSB/LeCarnet-2M",
         help="Name of the model to use for inference",
     )
     parser.add_argument(

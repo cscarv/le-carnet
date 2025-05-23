@@ -11,27 +11,21 @@ INFERENCE_SCRIPT     := src/inference/inference.py
 # Data generation parameters
 MISTRAL_MODEL        ?= mistral-small-2501
 MISTRAL_REQUESTS     ?= 100000
-OPENAI_BASE_URL      ?= https://api.openai.com/v1/chat/completions
 OPENAI_MODEL         ?= gpt-3.5-turbo
-OPENAI_REQUESTS      ?= 512
+OPENAI_REQUESTS      ?= 100000
 SPLIT                ?= train
 NLLB_MODEL           ?= facebook/nllb-200-distilled-600M
-BATCH_SIZE           ?= 32
 FOLDER_PATH          ?= ./backup/
 REPO_NAME            ?= MaxLSB/LeCarnet
 
 # Train parameters
-MODEL_REPO_NAME ?= MaxLSB/LeCarnet-2M
-CONFIG ?= 2M
-TRAIN_BATCH_SIZE ?= 16
-GRADIENT_ACCUMULATION_STEPS ?= 4
-LEARNING_RATE ?= 5e-4
-MAX_TRAIN_STEPS ?= 10000
+MODEL_REPO_NAME ?= MaxLSB/LeCarnet-16M
+MODEL_CONFIG ?= 16M
 
 # Inference parameters
-MODEL_NAME ?= LeCarnet-2M
+MODEL_NAME ?= MaxLSB/LeCarnet-2M
 MAX_NEW_TOKENS ?= 256
-PROMPT ?= Il était une fois 
+PROMPT ?= "Il était une fois" 
 
 .PHONY: env generate-mistral generate-openai translate push-dataset train inference
 
@@ -44,7 +38,6 @@ env:
 	@uv sync --python $(PYTHON_VERSION)
 	@echo "Environment ready."
 
-
 env-gpu: env
 	@uv sync --extra gpu
 
@@ -55,15 +48,13 @@ generate-mistral:
 
 generate-openai:
 	$(PYTHON) $(OPENAI_SCRIPT) \
-		--base_url $(OPENAI_BASE_URL) \
 		--model_name $(OPENAI_MODEL) \
 		--total_requests $(OPENAI_REQUESTS)
 
 translate:
 	$(PYTHON) $(TRANSLATE_SCRIPT) \
 		--split $(SPLIT) \
-		--model_name $(NLLB_MODEL) \
-		--batch_size $(BATCH_SIZE)
+		--model_name $(NLLB_MODEL)
 
 push-dataset:
 	$(PYTHON) $(PUSH_TO_HF_SCRIPT) \
@@ -71,13 +62,9 @@ push-dataset:
 		--repo_name $(REPO_NAME)
 
 train:
-	$(PYTHON) $(TRAIN_SCRIPT)
+	$(PYTHON) $(TRAIN_SCRIPT) \
 		--repo_name $(MODEL_REPO_NAME) \
-		--config $(CONFIG) \
-		--train_batch_size $(TRAIN_BATCH_SIZE) \
-		--gradient_accumulation_steps $(GRADIENT_ACCUMULATION_STEPS) \
-		--learning_rate $(LEARNING_RATE) \
-		--max_train_steps $(MAX_TRAIN_STEPS)
+		--model_config $(MODEL_CONFIG)
 
 inference:
 	$(PYTHON) $(INFERENCE_SCRIPT) \
