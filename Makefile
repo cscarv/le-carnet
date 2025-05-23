@@ -20,16 +20,18 @@ BATCH_SIZE           ?= 32
 FOLDER_PATH          ?= ./backup/
 REPO_NAME            ?= MaxLSB/LeCarnet
 
-# Train and inference parameters
-MODEL_NAME	?= LeCarnet-3M
-PROMPT ?= Il était une fois 
-MAX_NEW_TOKENS ?= 256
-DATASET_NAME ?= MaxLSB/LeCarnet
+# Train parameters
+MODEL_REPO_NAME ?= MaxLSB/LeCarnet-2M
+CONFIG ?= 2M
 TRAIN_BATCH_SIZE ?= 16
 GRADIENT_ACCUMULATION_STEPS ?= 4
 LEARNING_RATE ?= 5e-4
 MAX_TRAIN_STEPS ?= 10000
 
+# Inference parameters
+MODEL_NAME ?= LeCarnet-2M
+MAX_NEW_TOKENS ?= 256
+PROMPT ?= Il était une fois 
 
 .PHONY: env generate-mistral generate-openai translate push-dataset train inference
 
@@ -70,7 +72,8 @@ push-dataset:
 
 train:
 	$(PYTHON) $(TRAIN_SCRIPT)
-		--dataset_name $(DATASET_NAME) \
+		--repo_name $(MODEL_REPO_NAME) \
+		--config $(CONFIG) \
 		--train_batch_size $(TRAIN_BATCH_SIZE) \
 		--gradient_accumulation_steps $(GRADIENT_ACCUMULATION_STEPS) \
 		--learning_rate $(LEARNING_RATE) \

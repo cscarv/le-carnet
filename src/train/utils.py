@@ -77,7 +77,7 @@ def token_ids_to_text(token_ids, tokenizer):
     Convert token IDs back to text using the tokenizer.
     """
     flat = token_ids.squeeze(0)
-    return tokenizer.decode(flat.tolist())
+    return tokenizer.decode(flat.tolist(), skip_special_tokens=True)
 
 
 def num_parameters(model):

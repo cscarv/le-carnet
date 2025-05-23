@@ -14,7 +14,15 @@ from transformers import (
     get_scheduler,
 )
 from utils import num_parameters, generate_text
-from config import ModelConfig_3M
+from config import ModelConfig_2M, ModelConfig_16M, ModelConfig_33M, ModelConfig_50M
+
+
+MODEL_CONFIG_CLASSES = {
+    "2M": ModelConfig_2M,
+    "16M": ModelConfig_16M,
+    "33M": ModelConfig_33M,
+    "50M": ModelConfig_50M,
+}
 
 
 class Tokenizer:
@@ -61,15 +69,17 @@ class CollateFn:
         return input_encodings
 
 
-def get_llama_config(config) -> LlamaConfig:
+def get_llama_config(config, tokenizer) -> LlamaConfig:
     """
     Convert the model configuration to LlamaConfig.
     """
+    config_class = MODEL_CONFIG_CLASSES[config]
+    config = config_class()
     return LlamaConfig(
-        vocab_size=config.vocab_size,
-        pad_token_id=config.pad_token_id,
-        bos_token_id=config.bos_token_id,
-        eos_token_id=config.eos_token_id,
+        vocab_size=len(tokenizer),
+        pad_token_id=tokenizer.pad_token_id,
+        bos_token_id=tokenizer.bos_token_id,
+        eos_token_id=tokenizer.eos_token_id,
         hidden_size=config.hidden_size,
         intermediate_size=config.intermediate_size,
         num_hidden_layers=config.num_hidden_layers,
@@ -225,12 +235,17 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
+    print(f"Config: {args.config}")
+    print(f"Repo: {args.repo_name}")
+    print(f"Tokenizer: {args.tokenizer_name}")
+
     # Load dataset and tokenizer
     train_dataset, val_dataset = get_dataset(args.dataset_name, args.cache_dir)
     print(
         f"Loaded {len(train_dataset)} training samples and {len(val_dataset)} validation samples"
     )
     tokenizer = Tokenizer(args.tokenizer_name).get_tokenizer()
+    print(f"Tokenizer vocab size: {len(tokenizer)}")
 
     # Create dataloaders
     collate_fn = CollateFn(tokenizer, args.block_size)
@@ -245,8 +260,7 @@ def main(args):
     )
 
     # Model configuration
-    config = ModelConfig_3M()
-    llama_config = get_llama_config(config)
+    llama_config = get_llama_config(args.config, tokenizer)
     model = LlamaForCausalLM(llama_config).to(device)
 
     # Define Loss, Optimizer and scheduler
@@ -280,21 +294,92 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Train a Llama-based model on a single GPU."
+        description="Train a Llama-based model on a single GPU using LeCarnet dataset."
     )
-    parser.add_argument("--repo_name", type=str, default="MaxLSB/LeCarnet-3M")
-    parser.add_argument("--dataset_name", type=str, default="MaxLSB/LeCarnet")
-    parser.add_argument("--tokenizer_name", type=str, default="openai-community/gpt2")
-    parser.add_argument("--output_dir", type=str, default="checkpoints/")
-    parser.add_argument("--cache_dir", type=str, default="cache/")
-    parser.add_argument("--eval_steps", type=int, default=500)
-    parser.add_argument("--num_train_epochs", type=int, default=1)
-    parser.add_argument("--gradient_accumulation_steps", type=int, default=4)
-    parser.add_argument("--train_batch_size", type=int, default=16)
-    parser.add_argument("--eval_batch_size", type=int, default=16)
-    parser.add_argument("--learning_rate", type=float, default=5e-4)
-    parser.add_argument("--num_warmup_steps", type=int, default=200)
-    parser.add_argument("--max_train_steps", type=int, default=10000)
-    parser.add_argument("--block_size", type=int, default=512)
+    parser.add_argument(
+        "--config",
+        type=str,
+        choices=["2M", "16M", "33M", "50M"],
+        default="2M",
+        help="Size of the model to train.",
+    )
+    parser.add_argument(
+        "--repo_name",
+        type=str,
+        default="MaxLSB/LeCarnet-2M",
+        help="Name of the Hugging Face model repository to save or load from.",
+    )
+    parser.add_argument(
+        "--dataset_name",
+        type=str,
+        default="MaxLSB/LeCarnet",
+        help="Name of the dataset to load from the Hugging Face hub.",
+    )
+    parser.add_argument(
+        "--tokenizer_name",
+        type=str,
+        default="meta-llama/Llama-2-7b-hf",
+        help="Name or path of the tokenizer to use.",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="checkpoints/",
+        help="Directory where checkpoints will be saved.",
+    )
+    parser.add_argument(
+        "--cache_dir",
+        type=str,
+        default="cache/",
+        help="Directory to store the dataset cache.",
+    )
+    parser.add_argument(
+        "--eval_steps",
+        type=int,
+        default=500,
+        help="Number of steps between each evaluation.",
+    )
+    parser.add_argument(
+        "--num_train_epochs",
+        type=int,
+        default=1,
+        help="Total number of training epochs.",
+    )
+    parser.add_argument(
+        "--gradient_accumulation_steps",
+        type=int,
+        default=8,
+        help="Number of steps to accumulate gradients before performing a backward/update pass.",
+    )
+    parser.add_argument(
+        "--train_batch_size", type=int, default=16, help="Batch size per training step."
+    )
+    parser.add_argument(
+        "--eval_batch_size", type=int, default=16, help="Batch size for evaluation."
+    )
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=5e-4,
+        help="Initial learning rate for optimizer.",
+    )
+    parser.add_argument(
+        "--num_warmup_steps",
+        type=int,
+        default=200,
+        help="Number of warmup steps for the learning rate scheduler.",
+    )
+    parser.add_argument(
+        "--max_train_steps",
+        type=int,
+        default=10000,
+        help="Maximum number of total training steps.",
+    )
+    parser.add_argument(
+        "--block_size",
+        type=int,
+        default=512,
+        help="Maximum sequence length (in tokens) for model inputs.",
+    )
     args = parser.parse_args()
     main(args)

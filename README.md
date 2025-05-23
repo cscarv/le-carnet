@@ -24,7 +24,7 @@ That's it, you can now run any command you want!
 
 | Task                          | Make Command           | Equivalent CLI Command                                                                                                                                               |
 |-------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Training | `make train` | `python src/train/train.py --dataset_name MaxLSB/LeCarnet --train_batch_size 16 --gradient_accumulation_steps 4 --learning_rate 5e-4 --max_train_steps 10000`                                                |
+| Training | `make train` | `python src/train/train.py --repo_name MaxLSB/LeCarnet-2M --config 2M --train_batch_size 16 --gradient_accumulation_steps 4 --learning_rate 5e-4 --max_train_steps 10000`                                                |
 | Inference   | `make inference` | `python src/inference/inference.py --model_name MaxLSB/LeCarnet-3M --prompt "Il était une fois" --max_new_tokens 256`                                                |
 
 _Not all arguments are listed here._
