@@ -162,6 +162,7 @@ def train(
     gradient_accumulation_steps = config.gradient_accumulation_steps
     completed_steps = 0
     start_context = "Il était une fois"
+    best_val_loss = float("inf")
     pbar = tqdm(total=config.max_train_steps)
 
     model.train()
@@ -204,20 +205,15 @@ def train(
                 )
                 print(f"Generated sample: {generated_text}")
 
-                # Save model and tokenizer to the Hugging Face Hub and output directory
-                os.makedirs(output_dir, exist_ok=True)
-                model.save_pretrained(output_dir)
-                tokenizer.save_pretrained(output_dir)
-                repo.push_to_hub(
-                    commit_message=f"Training in progress step {step}", blocking=False
-                )
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
+                    tqdm.write(f"New best validation loss: {best_val_loss:.4f}")
+                    os.makedirs(output_dir, exist_ok=True)
+                    model.save_pretrained(output_dir)
+                    tokenizer.save_pretrained(output_dir)
+                    repo.push_to_hub(commit_message="New best model", blocking=False)
 
         pbar.close()
-
-        # Save model
-        os.makedirs(output_dir, exist_ok=True)
-        model.save_pretrained(output_dir)
-        tokenizer.save_pretrained(output_dir)
 
 
 def main(args):
