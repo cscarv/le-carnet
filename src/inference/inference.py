@@ -2,6 +2,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStream
 import torch
 import argparse
 from threading import Thread
+import time
 
 
 def tokenize_prompt(prompt, tokenizer):
@@ -33,15 +34,24 @@ def main(args):
     thread = Thread(target=model.generate, kwargs=generation_kwargs)
     thread.start()
 
-    print("Device:", args.device)
-
     # Stream the generated tokens
-    print("-" * 40)
+    print("\n" + "-" * 40)
     print(args.model_name)
-    print("-" * 40)
+    print("-" * 40 + "\n")
+
+    start_time = time.time()
+    token_count = 0
+
     for token in streamer:
+        token_ids = tokenizer(token, return_tensors="pt").input_ids[0]
+        if tokenizer.eos_token_id in token_ids:
+            break
+        token_count += 1
         print(token, end="", flush=True)
+
     print()
+    elapsed_time = time.time() - start_time
+    print(f"\n> Speed: {token_count / elapsed_time:.2f} tokens/sec")
 
 
 if __name__ == "__main__":
