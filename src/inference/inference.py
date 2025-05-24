@@ -14,8 +14,6 @@ def tokenize_prompt(prompt, tokenizer):
 
 
 def main(args):
-    print("Device:", args.device)
-
     # Load the model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     model = AutoModelForCausalLM.from_pretrained(args.model_name).to(args.device)
@@ -34,6 +32,8 @@ def main(args):
     )
     thread = Thread(target=model.generate, kwargs=generation_kwargs)
     thread.start()
+
+    print("Device:", args.device)
 
     # Stream the generated tokens
     print("-" * 40)

@@ -4,9 +4,10 @@ PYTHON               := uv run python
 MISTRAL_SCRIPT       := src/data/mistral.py
 OPENAI_SCRIPT        := src/data/openai.py
 TRANSLATE_SCRIPT     := src/data/translate.py
-PUSH_TO_HF_SCRIPT    := src/data/push_to_hf.py
+PUSH_DATASET_SCRIPT   := src/data/push_dataset.py
 TRAIN_SCRIPT         := src/train/train.py
 INFERENCE_SCRIPT     := src/inference/inference.py
+PUSH_MODEL_SCRIPT     := src/train/push_model.py
 
 # Data generation parameters
 MISTRAL_MODEL        ?= mistral-small-2501
@@ -19,13 +20,16 @@ FOLDER_PATH          ?= ./backup/
 REPO_NAME            ?= MaxLSB/LeCarnet
 
 # Train parameters
-MODEL_REPO_NAME ?= MaxLSB/LeCarnet-16M
-MODEL_CONFIG ?= 16M
+MODEL_CONFIG ?= 2M
+
+# Push Model parameters
+HF_REPO ?= MaxLSB/LeCarnet-2M
+MODEL_DIR ?= checkpoints/2M
 
 # Inference parameters
 MODEL_NAME ?= MaxLSB/LeCarnet-2M
 MAX_NEW_TOKENS ?= 256
-PROMPT ?= "Il était une fois" 
+PROMPT ?= Il était une fois
 
 .PHONY: env generate-mistral generate-openai translate push-dataset train inference
 
@@ -57,13 +61,12 @@ translate:
 		--model_name $(NLLB_MODEL)
 
 push-dataset:
-	$(PYTHON) $(PUSH_TO_HF_SCRIPT) \
+	$(PYTHON) $(PUSH_DATASET_SCRIPT) \
 		--folder_path $(FOLDER_PATH) \
 		--repo_name $(REPO_NAME)
 
 train:
 	$(PYTHON) $(TRAIN_SCRIPT) \
-		--repo_name $(MODEL_REPO_NAME) \
 		--model_config $(MODEL_CONFIG)
 
 inference:
@@ -71,3 +74,8 @@ inference:
 		--model_name $(MODEL_NAME) \
 		--prompt "$(PROMPT)" \
 		--max_new_tokens $(MAX_NEW_TOKENS)
+
+push-model:
+	$(PYTHON) $(PUSH_MODEL_SCRIPT) \
+		--repo_name $(HF_REPO) \
+		--model_dir "$(MODEL_DIR)" 

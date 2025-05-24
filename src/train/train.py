@@ -2,7 +2,6 @@ import argparse
 import os
 import torch
 import wandb
-from huggingface_hub import Repository, create_repo
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from tqdm import tqdm
@@ -99,19 +98,6 @@ def get_llama_config(config, tokenizer) -> LlamaConfig:
     )
 
 
-def get_hf_repo(repo_name: str, output_dir: str) -> Repository:
-    """
-    Create or connect to a Hugging Face repository for the model.
-    """
-    create_repo(repo_name, exist_ok=True, private=True)
-    repo = Repository(
-        local_dir=output_dir,
-        clone_from=repo_name,
-        use_auth_token=True,
-    )
-    return repo
-
-
 def compute_batch_loss(model, batch, loss_fn, device):
     """
     Compute the loss for a batch of data.
@@ -152,7 +138,6 @@ def train(
     optimizer,
     lr_scheduler,
     device,
-    repo,
     output_dir,
 ):
     """
@@ -211,7 +196,6 @@ def train(
                     os.makedirs(output_dir, exist_ok=True)
                     model.save_pretrained(output_dir)
                     tokenizer.save_pretrained(output_dir)
-                    repo.push_to_hub(commit_message="New best model", blocking=False)
 
         pbar.close()
 
@@ -224,14 +208,14 @@ def main(args):
     train_config = TrainConfig()
 
     # Set the output directory
-    output_dir = os.path.join(train_config.output_dir, args.repo_name.split("/")[-1])
 
-    # Setting the HF repo
+    output_dir = os.path.join(train_config.output_dir, args.model_config)
+
+    # Make sure the Hugging Face token is set
     if not os.getenv("HF_TOKEN"):
         raise ValueError(
             "Please set the HF_TOKEN environment variable to your Hugging Face token."
         )
-    repo = get_hf_repo(args.repo_name, output_dir)
 
     # Initialize wandb
     wandb.init(project="LeCarnet", name="le-carnet-training-run")
@@ -239,8 +223,8 @@ def main(args):
     # Display training information
     print(f"Using device: {train_config.device}")
     print(f"Config: {args.model_config}")
-    print(f"Repo: {args.repo_name}")
     print(f"Tokenizer: {train_config.tokenizer_name}")
+    print(f"Output directory: {output_dir}")
 
     # Load dataset and tokenizer
     train_dataset, val_dataset = get_dataset(
@@ -290,7 +274,6 @@ def main(args):
         optimizer,
         lr_scheduler,
         train_config.device,
-        repo,
         output_dir,
     )
 
@@ -307,12 +290,6 @@ if __name__ == "__main__":
         choices=["2M", "16M", "33M", "50M"],
         default="2M",
         help="Size of the model to train.",
-    )
-    parser.add_argument(
-        "--repo_name",
-        type=str,
-        default="MaxLSB/LeCarnet-2M",
-        help="Name of the Hugging Face model repository to save or load from.",
     )
     args = parser.parse_args()
     main(args)

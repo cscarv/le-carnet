@@ -24,8 +24,9 @@ That's it, you can now run any command you want!
 
 | Task        | Make Command       | Equivalent CLI Command                                                                                                                                               | Default Values                                                                 |
 |-------------|--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
-| Training    | `make train`       | `python src/train/train.py --repo_name MODEL_REPO_NAME --model_config MODEL_CONFIG`                                                                                 | `MODEL_REPO_NAME=MaxLSB/LeCarnet-2M`, `MODEL_CONFIG=2M`                              |
-| Inference   | `make inference`   | `python src/inference/inference.py --model_name MODEL_NAME --prompt PROMPT --max_new_tokens MAX_NEW_TOKENS`                                              | `MODEL_NAME=MaxLSB/LeCarnet-3M`, `PROMPT="Il était une fois"`, `MAX_NEW_TOKENS=256` |
+| Training    | `make train`       | `python src/train/train.py --model_config MODEL_CONFIG`                                                                                 | `MODEL_CONFIG=2M`                              |
+| Inference   | `make inference`   | `python src/inference/inference.py --model_name MODEL_NAME --prompt PROMPT --max_new_tokens MAX_NEW_TOKENS`                                              | `MODEL_NAME=MaxLSB/LeCarnet-2M`, `PROMPT="Il était une fois"`, `MAX_NEW_TOKENS=256` |
+| Push Model to HF   | `make push-model`   | `python src/inference/push-model.py --repo_name HF_REPO --model_dir MODEL_DIR`                                              | `HF_REPO=MaxLSB/LeCarnet-2M`, `MODEL_DIR=checkpoints/2M` |
 
 _Check `src/train/train_config.py` for fine-grained hyperparameter tuning._
 
@@ -52,7 +53,7 @@ $env:OPENAI_API_KEY="your_api_key"
 | Generate with Mistral         | `make generate-mistral`| `python src/data/mistral.py --model_name MISTRAL_MODEL --total_requests MISTRAL_REQUESTS`                                              | `MISTRAL_MODEL=mistral-small-2501`, `MISTRAL_REQUESTS=100000`                                               |
 | Generate with OpenAI          | `make generate-openai` | `python src/data/openai.py --model_name OPENAI_MODEL --total_requests OPENAI_REQUESTS`                                                   | `OPENAI_MODEL=gpt-3.5-turbo`, `OPENAI_REQUESTS=100000`                                                    |
 | Translate TinyStories Dataset | `make translate`       | `python src/data/translation.py --split SPLIT --model_name NLLB_MODEL`                  | `SPLIT=train`, `NLLB_MODEL=facebook/nllb-200-distilled-600M`                      |
-| Push Dataset to HF            | `make push-dataset`    | `python src/data/push_to_hf.py --folder_path FOLDER_PATH --repo_name REPO_NAME`                                           | `FOLDER_PATH=./backup/`, `REPO_NAME=MaxLSB/LeCarnet`                                                |
+| Push Dataset to HF            | `make push-dataset`    | `python src/data/push_dataset.py --folder_path FOLDER_PATH --repo_name REPO_NAME`                                           | `FOLDER_PATH=./backup/`, `REPO_NAME=MaxLSB/LeCarnet`                                                |
 
 _Not all arguments are listed here._
 

@@ -15,6 +15,6 @@ class TrainConfig:
     train_batch_size: int = 16
     eval_batch_size: int = 16
     learning_rate: float = 5e-4
-    num_warmup_steps: int = 200
-    max_train_steps: int = 4000
+    num_warmup_steps: int = 500
+    max_train_steps: int = 10000
     block_size: int = 512
