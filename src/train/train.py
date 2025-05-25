@@ -65,6 +65,7 @@ class CollateFn:
             padding="max_length",
             truncation=True,
             return_tensors="pt",
+            add_special_tokens=True,
         )
 
         input_encodings["labels"] = input_encodings["input_ids"].clone()

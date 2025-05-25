@@ -5,22 +5,30 @@ from threading import Thread
 import time
 
 
-def tokenize_prompt(prompt, tokenizer):
+def tokenize_prompt(prompt, tokenizer, device):
     """
     Tokenizes the input prompt using the provided tokenizer.
     """
     input_ids = tokenizer(prompt, return_tensors="pt").input_ids
-    input_ids = input_ids.to(args.device)
+    input_ids = input_ids.to(device)
     return input_ids
+
+
+def get_tokenizer(model_name):
+    """
+    Loads the tokenizer for the specified model.
+    """
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    return tokenizer
 
 
 def main(args):
     # Load the model and tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    tokenizer = get_tokenizer(args.model_name)
     model = AutoModelForCausalLM.from_pretrained(args.model_name).to(args.device)
 
     # Tokenize the input prompt
-    input_ids = tokenize_prompt(args.prompt, tokenizer)
+    input_ids = tokenize_prompt(args.prompt, tokenizer, args.device)
     streamer = TextIteratorStreamer(tokenizer, skip_special_tokens=True)
 
     generation_kwargs = dict(

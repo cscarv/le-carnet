@@ -28,7 +28,7 @@ MODEL_DIR ?= checkpoints/2M
 
 # Inference parameters
 MODEL_NAME ?= MaxLSB/LeCarnet-2M
-MAX_NEW_TOKENS ?= 256
+MAX_NEW_TOKENS ?= 512
 PROMPT ?= Il était une fois
 
 .PHONY: env generate-mistral generate-openai translate push-dataset train inference

@@ -5,7 +5,7 @@ import torch
 @dataclass
 class TrainConfig:
     dataset_name: str = "MaxLSB/LeCarnet"
-    tokenizer_name: str = "meta-llama/Llama-2-7b-hf"
+    tokenizer_name: str = "lightonai/pagnol-small"
     output_dir: str = "checkpoints/"
     cache_dir: str = "cache/"
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
