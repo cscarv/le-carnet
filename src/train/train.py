@@ -1,5 +1,7 @@
-import argparse
 import os
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+import argparse
 import torch
 import wandb
 from torch.utils.data import DataLoader
