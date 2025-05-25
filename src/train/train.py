@@ -57,7 +57,7 @@ class CollateFn:
         self.block_size = block_size
 
     def __call__(self, batch):
-        texts = [item["text"] for item in batch]
+        texts = [item["text"] + self.tokenizer.eos_token for item in batch]
 
         input_encodings = self.tokenizer(
             texts,
@@ -65,12 +65,11 @@ class CollateFn:
             padding="max_length",
             truncation=True,
             return_tensors="pt",
-            add_special_tokens=True,
+            add_special_tokens=False,
         )
 
         input_encodings["labels"] = input_encodings["input_ids"].clone()
         input_encodings["labels"][:, :-1] = input_encodings["input_ids"][:, 1:]
-        input_encodings["labels"][:, -1] = self.tokenizer.eos_token_id
 
         return input_encodings
 
