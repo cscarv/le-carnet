@@ -18,3 +18,4 @@ class TrainConfig:
     num_warmup_steps: int = 500
     max_train_steps: int = 10000
     block_size: int = 512
+    num_workers: int = 4

@@ -243,9 +243,15 @@ def main(args):
         batch_size=train_config.train_batch_size,
         collate_fn=collate_fn,
         shuffle=True,
+        num_workers=train_config.num_workers,
+        pin_memory=True,
     )
     val_dataloader = DataLoader(
-        val_dataset, batch_size=train_config.eval_batch_size, collate_fn=collate_fn
+        val_dataset,
+        batch_size=train_config.eval_batch_size,
+        collate_fn=collate_fn,
+        num_workers=train_config.num_workers,
+        pin_memory=True,
     )
 
     # Model
