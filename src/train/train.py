@@ -67,7 +67,6 @@ class CollateFn:
             padding="max_length",
             truncation=True,
             return_tensors="pt",
-            add_special_tokens=False,
         )
 
         input_encodings["labels"] = input_encodings["input_ids"].clone()
@@ -187,8 +186,7 @@ def train(
                 generated_text = generate_text(
                     model,
                     tokenizer,
-                    context_size=config.block_size,
-                    start_context=start_context,
+                    start_context,
                 )
                 print(f"Generated sample: {generated_text}")
 
@@ -210,7 +208,6 @@ def main(args):
     train_config = TrainConfig()
 
     # Set the output directory
-
     output_dir = os.path.join(train_config.output_dir, args.model_config)
 
     # Make sure the Hugging Face token is set
@@ -264,7 +261,7 @@ def main(args):
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
     optimizer = AdamW(model.parameters(), lr=train_config.learning_rate)
     lr_scheduler = get_scheduler(
-        name="cosine",
+        name="linear",
         optimizer=optimizer,
         num_warmup_steps=train_config.num_warmup_steps,
         num_training_steps=train_config.max_train_steps,
