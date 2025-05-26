@@ -152,7 +152,7 @@ def train(
     model.train()
     for epoch in range(config.num_train_epochs):
         for step, batch in enumerate(train_dataloader, start=1):
-            if step > config.max_train_steps:
+            if completed_steps > config.max_train_steps:
                 break
             loss = compute_batch_loss(model, batch, loss_fn, device)
             loss = loss / gradient_accumulation_steps
