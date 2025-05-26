@@ -34,13 +34,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--repo_name",
         type=str,
-        default="MaxLSB/LeCarnet-2M",
+        default="MaxLSB/LeCarnet-3M",
         help="Hugging Face repository name",
     )
     parser.add_argument(
         "--model_dir",
         type=str,
-        default="checkpoints/2M",
+        default="checkpoints/3M",
         help="Directory where the model is saved",
     )
     args = parser.parse_args()

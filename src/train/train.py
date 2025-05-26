@@ -16,19 +16,17 @@ from transformers import (
 )
 from utils import num_parameters, generate_text
 from model_config import (
-    ModelConfig_2M,
-    ModelConfig_16M,
-    ModelConfig_33M,
-    ModelConfig_50M,
+    ModelConfig_3M,
+    ModelConfig_8M,
+    ModelConfig_21M,
 )
 from train_config import TrainConfig
 
 
 MODEL_CONFIG_CLASSES = {
-    "2M": ModelConfig_2M,
-    "16M": ModelConfig_16M,
-    "33M": ModelConfig_33M,
-    "50M": ModelConfig_50M,
+    "3M": ModelConfig_3M,
+    "8M": ModelConfig_8M,
+    "21M": ModelConfig_21M,
 }
 
 
@@ -154,6 +152,8 @@ def train(
     model.train()
     for epoch in range(config.num_train_epochs):
         for step, batch in enumerate(train_dataloader, start=1):
+            if step > config.max_train_steps:
+                break
             loss = compute_batch_loss(model, batch, loss_fn, device)
             loss = loss / gradient_accumulation_steps
             loss.backward()
@@ -198,6 +198,7 @@ def train(
                     tokenizer.save_pretrained(output_dir)
 
         pbar.close()
+        tqdm.write("Training complete.")
 
 
 def main(args):
@@ -292,8 +293,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_config",
         type=str,
-        choices=["2M", "16M", "33M", "50M"],
-        default="2M",
+        choices=["3M", "8M", "21M"],
+        default="3M",
         help="Size of the model to train.",
     )
     args = parser.parse_args()

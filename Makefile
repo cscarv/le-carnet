@@ -20,14 +20,14 @@ FOLDER_PATH          ?= ./backup/
 REPO_NAME            ?= MaxLSB/LeCarnet
 
 # Train parameters
-MODEL_CONFIG ?= 2M
+MODEL_CONFIG ?= 3M
 
 # Push Model parameters
-HF_REPO ?= MaxLSB/LeCarnet-2M
-MODEL_DIR ?= checkpoints/2M
+HF_REPO ?= MaxLSB/LeCarnet-3M
+MODEL_DIR ?= checkpoints/3M
 
 # Inference parameters
-MODEL_NAME ?= MaxLSB/LeCarnet-2M
+MODEL_NAME ?= MaxLSB/LeCarnet-3M
 MAX_NEW_TOKENS ?= 512
 PROMPT ?= Il était une fois
 
