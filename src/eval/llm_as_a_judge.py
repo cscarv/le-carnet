@@ -110,8 +110,10 @@ def eval_story(
                 model_name=model_name,
             )
 
-            grades = extract_grades(evaluation)
-            return grades
+            print("Evaluation received:", evaluation)
+
+            grade = extract_grades(evaluation)
+            return grade
         except SDKError as e:
             if getattr(e, "status_code", None) == 429 and attempt < 2:
                 wait = 1.0 + random.random() * 0.5
@@ -126,12 +128,12 @@ def eval_story(
 # # Dataset on Hugging Face
 # dataset_name = "LesGolems/LeCarnet/"
 
-# def get_dataset(dataset_name, data_dir=None, split="test", cache_dir=None):
-#     """
-#     Load the specified split of the dataset from the Hugging Face Hub.
-#     """
-#     dataset = load_dataset(dataset_name, data_dir=data_dir ,split=split, cache_dir=cache_dir)
-#     return dataset
+def get_dataset(dataset_name, split="test", cache_dir=None):
+    """
+    Load the specified split of the dataset from the Hugging Face Hub.
+    """
+    dataset = load_dataset(dataset_name ,split=split, cache_dir=cache_dir)
+    return dataset
 
 
 def tokenize_prompt(prompt, tokenizer):
@@ -148,21 +150,15 @@ def main(args):
     # tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     # model = AutoModelForCausalLM.from_pretrained(args.model_name).to(args.device)
 
-    # df = get_dataset(dataset_name, data_dir=None, split="test", cache_dir="cache/")
-
-    file_path = "src/eval/test-00000-of-00001.parquet"
-
-    # Load using pandas
-    df = pd.read_parquet(file_path, engine="pyarrow")
+    df = get_dataset(args.dataset_name, split="test", cache_dir="cache/")
 
     model = AutoModelForCausalLM.from_pretrained('roneneldan/TinyStories-1M')
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
-
     
 
     grades = np.zeros((len(df), 4), dtype=int)  # Assuming 4 categories: Grammar, Creativity, Coherence, Logic
     
-    for i, prompt in enumerate(df["text"].tolist()):
+    for i, prompt in enumerate(df["text"]):
 
 
         inputs = tokenizer(prompt[:-3], return_tensors="pt", truncation=True)
@@ -194,9 +190,13 @@ def main(args):
 
         client = get_client(api_key=api_key)
 
+        grade = eval_story(client, eval_part, args.model_name)
 
-        evaluation = eval_story(client, eval_part, args.model_name)
-        grades[i] = evaluation
+        if len(grade) != 4:
+            print(f"Error: Expected 4 grades, got {len(grade)} for prompt {i}. Skipping this entry.")
+            continue
+
+        grades[i] = grade
     
     final_grade = np.mean(grades, axis=0)
     print("Final Grades (Grammar, Creativity, Coherence, Logic):", final_grade)
@@ -207,6 +207,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Evaluation script for LeCarnet models")
 
+    parser.add_argument(
+        "--dataset_name",
+        type=str,
+        default="LesGolems/LeCarnet",
+        help="dataset_name to use for evaluation (default: LesGolems/LeCarnet)",
+    )
 
     parser.add_argument(
         "--device",

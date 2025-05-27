@@ -12,3 +12,4 @@ __pycache__/
 *.lock
 wandb/
 mistral_api_key.txt
+src/eval/test-00000-of-00001.parquet
