@@ -4,6 +4,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import argparse
 import torch
 import wandb
+import math
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from tqdm import tqdm
@@ -137,6 +138,7 @@ def train(
     optimizer,
     lr_scheduler,
     device,
+    num_epochs,
     output_dir,
 ):
     """
@@ -144,15 +146,15 @@ def train(
     """
     # Training loop
     gradient_accumulation_steps = config.gradient_accumulation_steps
-    completed_steps = 0
+    effective_steps = 0
     start_context = "Il était une fois"
     best_val_loss = float("inf")
-    pbar = tqdm(total=config.max_train_steps)
+    pbar = tqdm(total=config.max_train_steps, desc="Training progress")
 
     model.train()
-    for epoch in range(config.num_train_epochs):
+    for epoch in range(num_epochs):
         for step, batch in enumerate(train_dataloader, start=1):
-            if completed_steps > config.max_train_steps:
+            if effective_steps >= config.max_train_steps:
                 break
             loss = compute_batch_loss(model, batch, loss_fn, device)
             loss = loss / gradient_accumulation_steps
@@ -160,7 +162,7 @@ def train(
 
             if step % 100 == 0:
                 tqdm.write(
-                    f"step {completed_steps} | loss/train: {loss.item() * gradient_accumulation_steps:.4f} | lr: {optimizer.param_groups[0]['lr']:.6f}"
+                    f"step {effective_steps} | loss/train: {loss.item() * gradient_accumulation_steps:.4f} | lr: {optimizer.param_groups[0]['lr']:.6f}"
                 )
 
             if step % gradient_accumulation_steps == 0:
@@ -168,7 +170,7 @@ def train(
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad()
-                completed_steps += 1
+                effective_steps += 1
                 pbar.update(1)
                 wandb.log(
                     {
@@ -197,8 +199,8 @@ def train(
                     model.save_pretrained(output_dir)
                     tokenizer.save_pretrained(output_dir)
 
-        pbar.close()
-        tqdm.write("Training complete.")
+    pbar.close()
+    tqdm.write("Training complete.")
 
 
 def main(args):
@@ -268,6 +270,12 @@ def main(args):
         num_training_steps=train_config.max_train_steps,
     )
 
+    steps_per_epoch = math.ceil(
+        len(train_dataset)
+        / (train_config.train_batch_size * train_config.gradient_accumulation_steps)
+    )
+    num_epochs = math.ceil(train_config.max_train_steps / steps_per_epoch)
+
     print(f"Training {num_parameters(model) / 1e6:.2f}M parameters")
     print("Starting training...")
     train(
@@ -280,6 +288,7 @@ def main(args):
         optimizer,
         lr_scheduler,
         train_config.device,
+        num_epochs,
         output_dir,
     )
 

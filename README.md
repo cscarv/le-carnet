@@ -1,11 +1,17 @@
 # LeCarnet: the french TinyStories
 
-_(Work in progress...)_
+![LeCarnet](./media/lecarnet.png)
 
-LeCarnet is a text dataset of 1 million children's stories in french using very simple vocabulary, inspired by the English TinyStories dataset. 
-The purpose is to provide a reliable, high-quality resource for training and evaluating small language models (SLMs). It is aimed at educational and experimental use.
+**LeCarnet** is a text dataset of **1.4 million** children's stories in **french** using very simple vocabulary, inspired by the English TinyStories dataset. 
+The purpose of this work is to provide a reliable, high-quality resource for training and evaluating small language models (SLMs). It is aimed at educational and experimental use. This repository contains the data generation pipeline, as well as the training, evaluation, and inference code that we used.
 
 This dataset was created by synthetically generating French short stories using [Mistral-Small-24B-Instruct-2501](https://huggingface.co/mistralai/Mistral-Small-24B-Instruct-2501)
+
+The dataset and models are available on Hugging Face:
+- [LeCarnet Dataset](https://huggingface.co/datasets/MaxLSB/LeCarnet)
+- [LeCarnet-3M](https://huggingface.co/MaxLSB/LeCarnet-3M)
+- [LeCarnet-8M](https://huggingface.co/MaxLSB/LeCarnet-8M)
+- [LeCarnet-21M](https://huggingface.co/MaxLSB/LeCarnet-21M)
 
 ## Quick Setup
 
@@ -60,4 +66,3 @@ _Not all arguments are listed here._
 # References
 
 - [`TinyStories: How Small Can Language Models Be and Still Speak Coherent English?`](https://arxiv.org/pdf/2305.07759)
-- [`TinyStories Dataset`](https://huggingface.co/datasets/roneneldan/TinyStories)
