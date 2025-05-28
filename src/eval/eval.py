@@ -7,9 +7,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStream
 import torch
 from mistralai import Mistral
 from mistralai.models.sdkerror import SDKError
+from httpx import RemoteProtocolError
 import os
 import re
 import numpy as np
+from tqdm import tqdm
+
 
 def get_client(api_key: str):
     return Mistral(api_key=api_key)
@@ -19,7 +22,7 @@ def send_message(client, message1, message2, model_name):
 
     for attempt in range(5):
         try:
-            # Étape 1 : envoyer message1
+
             resp1 = client.chat.complete(
                 messages=[{"role": "user", "content": message1}],
                 model=model_name,
@@ -30,7 +33,6 @@ def send_message(client, message1, message2, model_name):
 
             reply1 = resp1.choices[0].message.content
 
-            # Étape 2 : envoyer message2 en gardant le contexte
             full_messages = [
                 {"role": "user", "content": message1},
                 {"role": "assistant", "content": reply1},
@@ -47,8 +49,8 @@ def send_message(client, message1, message2, model_name):
 
             return resp2.choices[0].message.content
 
-        except SDKError as e:
-            if getattr(e, "status_code", None) == 429 and attempt < 4:
+        except (SDKError, RemoteProtocolError) as e:
+            if attempt < 4:
                 wait = backoff + random.random() * 0.5
                 time.sleep(wait)
                 backoff *= 2
@@ -110,7 +112,7 @@ def eval_story(
                 model_name=model_name,
             )
 
-            print("Evaluation received:", evaluation)
+            # print(f"Evaluation received: {evaluation}")
 
             grade = extract_grades(evaluation)
             return grade
@@ -123,10 +125,6 @@ def eval_story(
 
     raise RuntimeError("Max retries reached")
 
-
-
-# # Dataset on Hugging Face
-# dataset_name = "LesGolems/LeCarnet/"
 
 def get_dataset(dataset_name, split="test", cache_dir=None):
     """
@@ -147,18 +145,14 @@ def tokenize_prompt(prompt, tokenizer):
 def main(args):
 
     # Load the model and tokenizer
-    # tokenizer = AutoTokenizer.from_pretrained(args.model_name)
-    # model = AutoModelForCausalLM.from_pretrained(args.model_name).to(args.device)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    model = AutoModelForCausalLM.from_pretrained(args.model_name).to(args.device)
 
     df = get_dataset(args.dataset_name, split="test", cache_dir="cache/")
 
-    model = AutoModelForCausalLM.from_pretrained('roneneldan/TinyStories-1M')
-    tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
-    
-
     grades = np.zeros((len(df), 4), dtype=int)  # Assuming 4 categories: Grammar, Creativity, Coherence, Logic
     
-    for i, prompt in enumerate(df["text"]):
+    for i, prompt in enumerate(tqdm(df["text"], desc="Evaluating stories")):
 
 
         inputs = tokenizer(prompt[:-3], return_tensors="pt", truncation=True)
@@ -169,9 +163,10 @@ def main(args):
             input_ids=input_ids,
             attention_mask=attention_mask,
             max_new_tokens=100,
-            temperature=0.7,
+            temperature=0.1,
             top_k=50,
             do_sample=True,
+            pad_token_id=tokenizer.eos_token_id,
         )
 
         output = model.generate(**generation_kwargs)
@@ -190,7 +185,7 @@ def main(args):
 
         client = get_client(api_key=api_key)
 
-        grade = eval_story(client, eval_part, args.model_name)
+        grade = eval_story(client, eval_part, args.eval_model_name)
 
         if len(grade) != 4:
             print(f"Error: Expected 4 grades, got {len(grade)} for prompt {i}. Skipping this entry.")
@@ -208,10 +203,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluation script for LeCarnet models")
 
     parser.add_argument(
+        "--model_name",
+        type=str,
+        default="MaxLSB/LeCarnet-21M",
+        help="Model name to evaluate (default: MaxLSB/LeCarnet-21M)",
+    )
+
+    parser.add_argument(
         "--dataset_name",
         type=str,
         default="LesGolems/LeCarnet",
-        help="dataset_name to use for evaluation (default: LesGolems/LeCarnet)",
+        help="dataset_name to use for evaluation (default: LesGolems/LeCarnet/test)",
     )
 
     parser.add_argument(
@@ -222,10 +224,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--model_name",
+        "--eval_model_name",
         type=str,
         default="mistral-small-2501",
-        help="Model name to use for generating stories.",
+        help="Model name to use for evaluation (default: mistral-small-2501)",
     )
 
     args = parser.parse_args()
