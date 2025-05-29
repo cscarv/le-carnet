@@ -35,7 +35,7 @@ The training pipeline supports Weights & Biases (WandB) for tracking training an
 | Inference   | `make inference`   | `python src/inference/inference.py --model_name MODEL_NAME --prompt PROMPT --max_new_tokens MAX_NEW_TOKENS`                                              | `MODEL_NAME=MaxLSB/LeCarnet-3M`, `PROMPT="Il était une fois"`, `MAX_NEW_TOKENS=512` |
 | Push Model to HF   | `make push-model`   | `python src/inference/push-model.py --repo_name HF_REPO --model_dir MODEL_DIR`                                              | `HF_REPO=MaxLSB/LeCarnet-3M`, `MODEL_DIR=checkpoints/3M` |
 
-_Check `src/train/train_config.py` for fine-grained hyperparameter tuning._
+_Check `src/train/configs.py` for fine-grained hyperparameter tuning._
 
 ## Data Generation
 For Generation tasks set your API key (for translation the model runs locally):

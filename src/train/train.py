@@ -16,12 +16,12 @@ from transformers import (
     get_scheduler,
 )
 from utils import num_parameters, generate_text
-from model_config import (
+from train.configs import (
+    TrainConfig,
     ModelConfig_3M,
     ModelConfig_8M,
     ModelConfig_21M,
 )
-from train_config import TrainConfig
 
 
 MODEL_CONFIG_CLASSES = {
