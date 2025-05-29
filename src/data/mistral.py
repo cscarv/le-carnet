@@ -101,12 +101,10 @@ def generate_stories(
     stories_buffer = []
     # Create a thread pool for parallel requests
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
-        futures = [executor.submit(
-            send_message,
-            client,
-            build_message(vocab),
-            model_name
-        ) for _ in range(total_requests)]
+        futures = [
+            executor.submit(send_message, client, build_message(vocab), model_name)
+            for _ in range(total_requests)
+        ]
 
         for future in tqdm(futures, desc="Generating stories", total=total_requests):
             story = future.result()
@@ -162,6 +160,7 @@ def main(args):
         output_file,
         args.num_workers,
     )
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate stories with a LLM.")

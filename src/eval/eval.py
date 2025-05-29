@@ -1,9 +1,8 @@
 import time
 import random
 from datasets import load_dataset
-import pandas as pd
 import argparse
-from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from mistralai import Mistral
 from mistralai.models.sdkerror import SDKError
@@ -16,6 +15,7 @@ from tqdm import tqdm
 
 def get_client(api_key: str):
     return Mistral(api_key=api_key)
+
 
 def send_message(client, message1, message2, model_name):
     backoff = 1.0
@@ -59,10 +59,12 @@ def send_message(client, message1, message2, model_name):
 
     raise RuntimeError("Max retries reached")
 
+
 def extract_grades(prompt):
     notes = re.findall(r"\b(\d{1,2})/10\b", prompt)
 
     return [int(note) for note in notes]
+
 
 def eval_story(
     client,
@@ -76,23 +78,20 @@ def eval_story(
     message = message.replace("\n", " ").strip()
 
     mistral_prompt_1 = """
-
         Dans l'exercice suivant, l'élève reçoit un début d'histoire. Il doit le compléter pour en faire une histoire complète.
         L'exercice évalue les compétences linguistiques et la créativité de l'élève. Le symbole *** marque la séparation entre le début imposé et la suite rédigée par l'élève.
 
         Voici l'histoire :
         {message}
         
-        Veuillez fournir votre évaluation générale de la partie rédigée par l'élève (celle qui se trouve après le symbole ***).
+        Fourni une évaluation générale de la partie rédigée par l'élève (celle qui se trouve après le symbole ***).
         Est-elle grammaticalement correcte ? Est-elle cohérente avec le début de l'histoire ?
-        Portez une attention particulière à la façon dont l'élève parvient à compléter la phrase interrompue au milieu par le séparateur ***.
-
+        Porte une attention particulière à la façon dont l'élève parvient à compléter la phrase interrompue au milieu par le séparateur ***.
     """
 
     mistral_prompt_2 = """
-
         Maintenant donne une note de 0 à 10 à l’élève pour chaque catégorie : grammaire, créativité, cohérence avec le début de l’histoire et logique du déroulement de l’intrigue.
-        De plus, donnez votre meilleure estimation de l’âge de l’élève tel qu’il ressort de sa rédaction.
+        De plus, donne ta meilleure estimation de l’âge de l’élève tel qu’il ressort de sa rédaction.
         Choisissez parmi les groupes d’âge suivants :
         A : 3 ans ou moins
         B : 4-5 ans
@@ -100,7 +99,6 @@ def eval_story(
         D : 8-9 ans
         E : 10-12 ans
         F : 13-16 ans
-
     """
 
     for attempt in range(3):
@@ -130,7 +128,7 @@ def get_dataset(dataset_name, split="test", cache_dir=None):
     """
     Load the specified split of the dataset from the Hugging Face Hub.
     """
-    dataset = load_dataset(dataset_name ,split=split, cache_dir=cache_dir)
+    dataset = load_dataset(dataset_name, split=split, cache_dir=cache_dir)
     return dataset
 
 
@@ -142,19 +140,18 @@ def tokenize_prompt(prompt, tokenizer):
     input_ids = input_ids.to(args.device)
     return input_ids
 
-def main(args):
 
+def main(args):
     # Load the model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     model = AutoModelForCausalLM.from_pretrained(args.model_name).to(args.device)
-
     df = get_dataset(args.dataset_name, split="test", cache_dir="cache/")
 
-    grades = np.zeros((len(df), 4), dtype=int)  # Assuming 4 categories: Grammar, Creativity, Coherence, Logic
-    
+    grades = np.zeros(
+        (len(df), 4), dtype=int
+    )  # Assuming 4 categories: Grammar, Creativity, Coherence, Logic
+
     for i, prompt in enumerate(tqdm(df["text"], desc="Evaluating stories")):
-
-
         inputs = tokenizer(prompt[:-3], return_tensors="pt", truncation=True)
         input_ids = inputs["input_ids"].to(args.device)
         attention_mask = inputs["attention_mask"].to(args.device)
@@ -171,9 +168,8 @@ def main(args):
 
         output = model.generate(**generation_kwargs)
 
-
         decoded_output = tokenizer.decode(output[0], skip_special_tokens=True)
-        generated_part = decoded_output[len(prompt[:-3]):]
+        generated_part = decoded_output[len(prompt[:-3]) :]
 
         eval_part = prompt + generated_part
 
@@ -188,47 +184,44 @@ def main(args):
         grade = eval_story(client, eval_part, args.eval_model_name)
 
         if len(grade) != 4:
-            print(f"Error: Expected 4 grades, got {len(grade)} for prompt {i}. Skipping this entry.")
+            print(
+                f"Error: Expected 4 grades, got {len(grade)} for prompt {i}. Skipping this entry."
+            )
             continue
 
         grades[i] = grade
-    
+
     final_grade = np.mean(grades, axis=0)
     print("Final Grades (Grammar, Creativity, Coherence, Logic):", final_grade)
 
 
-
 if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="Evaluation script for LeCarnet models")
-
+    parser = argparse.ArgumentParser(
+        description="Evaluation script for LeCarnet models"
+    )
     parser.add_argument(
         "--model_name",
         type=str,
-        default="MaxLSB/LeCarnet-21M",
-        help="Model name to evaluate (default: MaxLSB/LeCarnet-21M)",
+        default="MaxLSB/LeCarnet-3M",
+        help="Model name to evaluate.",
     )
-
     parser.add_argument(
         "--dataset_name",
         type=str,
-        default="LesGolems/LeCarnet",
-        help="dataset_name to use for evaluation (default: LesGolems/LeCarnet/test)",
+        default="MaxLSB/LeCarnet",
+        help="dataset_name to use for evaluation.",
     )
-
     parser.add_argument(
         "--device",
         type=str,
         default="cuda" if torch.cuda.is_available() else "cpu",
-        help="Device to run the model on (cuda or cpu)",
+        help="Device to run the model on (cuda or cpu).",
     )
-
     parser.add_argument(
         "--eval_model_name",
         type=str,
         default="mistral-small-2501",
-        help="Model name to use for evaluation (default: mistral-small-2501)",
+        help="Model name to use for evaluation.",
     )
-
     args = parser.parse_args()
     main(args)

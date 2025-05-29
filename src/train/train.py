@@ -176,7 +176,9 @@ def train(
                 )
 
             if (step % (config.eval_steps * gradient_accumulation_steps)) == 0:
-                val_loss, perplexity = evaluate(model, loss_fn, val_dataloader, config.device)
+                val_loss, perplexity = evaluate(
+                    model, loss_fn, val_dataloader, config.device
+                )
                 tqdm.write(f"loss/val: {val_loss:.4f} | perplexity: {perplexity:.2f}")
                 wandb.log({"val_loss": val_loss, "perplexity": perplexity})
 
@@ -224,7 +226,7 @@ def main(args):
         train_config.dataset_name, train_config.cache_dir
     )
     tokenizer = Tokenizer(train_config.tokenizer_name).get_tokenizer()
-    
+
     # Display training information
     print(f"Using device: {train_config.device}")
     print(f"Config: {args.model_config}")
@@ -255,11 +257,13 @@ def main(args):
     # Model
     llama_config = get_llama_config(args.model_config, tokenizer)
     model = LlamaForCausalLM(llama_config).to(train_config.device)
-    
+
     # Compute total iterations for num_epochs
     train_config.total_iterations = math.ceil(
-            len(train_dataloader) * train_config.num_epochs / train_config.gradient_accumulation_steps
-        )
+        len(train_dataloader)
+        * train_config.num_epochs
+        / train_config.gradient_accumulation_steps
+    )
 
     # Define Loss, Optimizer and scheduler
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
@@ -268,7 +272,7 @@ def main(args):
         name="linear",
         optimizer=optimizer,
         num_warmup_steps=train_config.num_warmup_steps,
-        num_training_steps = train_config.total_iterations,
+        num_training_steps=train_config.total_iterations,
     )
 
     print(f"Training {num_parameters(model) / 1e6:.2f}M parameters")

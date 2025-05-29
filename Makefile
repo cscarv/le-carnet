@@ -8,6 +8,7 @@ PUSH_DATASET_SCRIPT   := src/data/push_dataset.py
 TRAIN_SCRIPT         := src/train/train.py
 INFERENCE_SCRIPT     := src/inference/inference.py
 PUSH_MODEL_SCRIPT     := src/train/push_model.py
+EVAL_SCRIPT          := src/eval/eval.py
 
 # Data generation parameters
 MISTRAL_MODEL        ?= mistral-small-2501
@@ -31,6 +32,9 @@ MODEL_DIR ?= checkpoints/3M
 MODEL_NAME ?= MaxLSB/LeCarnet-3M
 MAX_NEW_TOKENS ?= 512
 PROMPT ?= Il était une fois
+
+# Evaluation parameters
+EVAL_MODEL_NAME ?= MaxLSB/LeCarnet-3M
 
 .PHONY: env generate-mistral generate-openai translate push-dataset train inference
 
@@ -76,6 +80,10 @@ inference:
 		--model_name $(MODEL_NAME) \
 		--prompt "$(PROMPT)" \
 		--max_new_tokens $(MAX_NEW_TOKENS)
+
+eval:
+	$(PYTHON) $(EVAL_SCRIPT) \
+		--model_name $(EVAL_MODEL_NAME) \
 
 push-model:
 	$(PYTHON) $(PUSH_MODEL_SCRIPT) \
