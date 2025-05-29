@@ -137,8 +137,6 @@ def train(
     val_dataloader,
     optimizer,
     lr_scheduler,
-    device,
-    num_epochs,
     output_dir,
 ):
     """
@@ -149,14 +147,12 @@ def train(
     effective_steps = 0
     start_context = "Il était une fois"
     best_val_loss = float("inf")
-    pbar = tqdm(total=config.max_train_steps, desc="Training progress")
+    pbar = tqdm(total=config.total_iterations, desc="Training")
 
     model.train()
-    for epoch in range(num_epochs):
+    for epoch in range(config.num_epochs):
         for step, batch in enumerate(train_dataloader, start=1):
-            if effective_steps >= config.max_train_steps:
-                break
-            loss = compute_batch_loss(model, batch, loss_fn, device)
+            loss = compute_batch_loss(model, batch, loss_fn, config.device)
             loss = loss / gradient_accumulation_steps
             loss.backward()
 
@@ -180,7 +176,7 @@ def train(
                 )
 
             if (step % (config.eval_steps * gradient_accumulation_steps)) == 0:
-                val_loss, perplexity = evaluate(model, loss_fn, val_dataloader, device)
+                val_loss, perplexity = evaluate(model, loss_fn, val_dataloader, config.device)
                 tqdm.write(f"loss/val: {val_loss:.4f} | perplexity: {perplexity:.2f}")
                 wandb.log({"val_loss": val_loss, "perplexity": perplexity})
 
@@ -222,21 +218,21 @@ def main(args):
     # Initialize wandb
     wandb.init(project="LeCarnet", name="le-carnet-training-run")
 
+    print("Loading dataset and tokenizer...")
+    # Load dataset and tokenizer
+    train_dataset, val_dataset = get_dataset(
+        train_config.dataset_name, train_config.cache_dir
+    )
+    tokenizer = Tokenizer(train_config.tokenizer_name).get_tokenizer()
+    
     # Display training information
     print(f"Using device: {train_config.device}")
     print(f"Config: {args.model_config}")
     print(f"Tokenizer: {train_config.tokenizer_name}")
     print(f"Output directory: {output_dir}")
-
-    # Load dataset and tokenizer
-    train_dataset, val_dataset = get_dataset(
-        train_config.dataset_name, train_config.cache_dir
-    )
     print(
         f"Loaded {len(train_dataset)} training samples and {len(val_dataset)} validation samples"
     )
-    tokenizer = Tokenizer(train_config.tokenizer_name).get_tokenizer()
-    print(f"Tokenizer vocab size: {len(tokenizer)}")
 
     # Create dataloaders
     collate_fn = CollateFn(tokenizer, train_config.block_size)
@@ -259,6 +255,11 @@ def main(args):
     # Model
     llama_config = get_llama_config(args.model_config, tokenizer)
     model = LlamaForCausalLM(llama_config).to(train_config.device)
+    
+    # Compute total iterations for num_epochs
+    train_config.total_iterations = math.ceil(
+            len(train_dataloader) * train_config.num_epochs / train_config.gradient_accumulation_steps
+        )
 
     # Define Loss, Optimizer and scheduler
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
@@ -267,14 +268,8 @@ def main(args):
         name="linear",
         optimizer=optimizer,
         num_warmup_steps=train_config.num_warmup_steps,
-        num_training_steps=train_config.max_train_steps,
+        num_training_steps = train_config.total_iterations,
     )
-
-    steps_per_epoch = math.ceil(
-        len(train_dataset)
-        / (train_config.train_batch_size * train_config.gradient_accumulation_steps)
-    )
-    num_epochs = math.ceil(train_config.max_train_steps / steps_per_epoch)
 
     print(f"Training {num_parameters(model) / 1e6:.2f}M parameters")
     print("Starting training...")
@@ -287,8 +282,6 @@ def main(args):
         val_dataloader,
         optimizer,
         lr_scheduler,
-        train_config.device,
-        num_epochs,
         output_dir,
     )
 

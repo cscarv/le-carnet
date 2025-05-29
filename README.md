@@ -27,6 +27,7 @@ make env-gpu
 That's it, you can now run any command you want!
 
 ## Training & Inference
+The training pipeline supports Weights & Biases (WandB) for tracking training and validation losses, as well as perplexity.
 
 | Task        | Make Command       | Equivalent CLI Command                                                                                                                                               | Default Values                                                                 |
 |-------------|--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
@@ -53,6 +54,8 @@ $env:MISTRAL_API_KEY="your_api_key"
 ```bash
 $env:OPENAI_API_KEY="your_api_key"
 ```
+
+A translation pipeline is available as we experimented with it at first, but chose to focus on the generation from scratch using Mistral.
 
 | Task                          | Make Command           | Equivalent CLI Command                                                                                                                                               | Default Values                                                                                     |
 |-------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
