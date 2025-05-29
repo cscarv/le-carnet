@@ -12,6 +12,7 @@ PUSH_MODEL_SCRIPT     := src/train/push_model.py
 # Data generation parameters
 MISTRAL_MODEL        ?= mistral-small-2501
 MISTRAL_REQUESTS     ?= 100000
+NUM_WORKERS          ?= 1
 OPENAI_MODEL         ?= gpt-3.5-turbo
 OPENAI_REQUESTS      ?= 100000
 SPLIT                ?= train
@@ -48,7 +49,8 @@ env-gpu: env
 generate-mistral:
 	$(PYTHON) $(MISTRAL_SCRIPT) \
 		--model_name $(MISTRAL_MODEL) \
-		--total_requests $(MISTRAL_REQUESTS)
+		--total_requests $(MISTRAL_REQUESTS) \
+		--num_workers $(NUM_WORKERS)
 
 generate-openai:
 	$(PYTHON) $(OPENAI_SCRIPT) \

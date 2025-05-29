@@ -6,6 +6,7 @@ import jsonlines
 import argparse
 from mistralai import Mistral
 from mistralai.models.sdkerror import SDKError
+from concurrent.futures import ThreadPoolExecutor
 
 
 class Vocabulary:
@@ -91,33 +92,37 @@ def generate_stories(
     model_name: str,
     total_requests: int,
     output_file: str,
-) -> list[dict]:
+    num_workers: int,
+) -> None:
     """
-    Generates stories using the specified model and saves them to a JSONL file every 50 stories.
+    Generates stories using threads and saves them periodically.
     """
-    stories = []
     start = time.time()
-
-    for _ in tqdm(range(total_requests), desc="Generating stories"):
-        message = build_message(vocab)
-        story = send_message(
+    stories_buffer = []
+    # Create a thread pool for parallel requests
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        futures = [executor.submit(
+            send_message,
             client,
-            message,
-            model_name=model_name,
-        )
+            build_message(vocab),
+            model_name
+        ) for _ in range(total_requests)]
 
-        stories.append(story)
+        for future in tqdm(futures, desc="Generating stories", total=total_requests):
+            story = future.result()
+            stories_buffer.append(story)
 
-        if len(stories) % 50 == 0:  # Save every 50 stories
-            save_stories_to_jsonl(stories, output_file)
-            stories = []
+            # Save every 50 stories
+            if len(stories_buffer) >= 50:
+                save_stories_to_jsonl(stories_buffer, output_file)
+                stories_buffer.clear()
 
     # Save any remaining stories
-    if stories:
-        save_stories_to_jsonl(stories, output_file)
+    if stories_buffer:
+        save_stories_to_jsonl(stories_buffer, output_file)
 
     elapsed = time.time() - start
-    tqdm.write(f"{total_requests} stories generated in {elapsed:.2f} seconds.")
+    print(f"{total_requests} stories generated in {elapsed:.2f} seconds.")
 
 
 def generate_output_file(model_name: str, output_dir: str) -> str:
@@ -140,7 +145,7 @@ def main(args):
     api_key = os.getenv("MISTRAL_API_KEY")
     if not api_key:
         raise ValueError(
-            f"API key not found. Set the MISTRAL_API_KEY environment variable."
+            "API key not found. Set the MISTRAL_API_KEY environment variable."
         )
 
     # Initialize the vocabulary and client
@@ -148,15 +153,15 @@ def main(args):
     client = get_client(api_key=api_key)
     output_file = generate_output_file(args.model_name, args.output_dir)
 
-    # Generate batches of stories
+    # Generate and save stories
     generate_stories(
         client,
         vocab,
         args.model_name,
         args.total_requests,
         output_file,
+        args.num_workers,
     )
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate stories with a LLM.")
@@ -177,6 +182,12 @@ if __name__ == "__main__":
         type=str,
         default="results/generated/mistral",
         help="Output file path for storing stories.",
+    )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=1,
+        help="Number of worker threads for parallel requests.",
     )
     args = parser.parse_args()
     main(args)
