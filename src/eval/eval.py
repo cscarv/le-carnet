@@ -220,7 +220,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--eval_model_name",
         type=str,
-        default="mistral-small-2501",
+        default="mistral-small-2503",
         help="Model name to use for evaluation.",
     )
     args = parser.parse_args()
