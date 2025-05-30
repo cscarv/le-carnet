@@ -167,7 +167,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_name",
         type=str,
-        default="mistral-small-2503",
+        default="mistral-small-2501",
         help="Model name to use for generating stories.",
     )
     parser.add_argument(
