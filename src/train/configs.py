@@ -1,5 +1,6 @@
-from dataclasses import dataclass
 import torch
+from dataclasses import dataclass
+from utils import get_mixed_precision_dtype
 
 
 @dataclass
@@ -18,6 +19,7 @@ class TrainConfig:
     num_epochs: int = 5
     block_size: int = 512
     num_workers: int = 4
+    dtype = get_mixed_precision_dtype()
 
 
 @dataclass

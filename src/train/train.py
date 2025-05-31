@@ -15,7 +15,7 @@ from transformers import (
     LlamaForCausalLM,
     get_scheduler,
 )
-from utils import num_parameters, generate_text
+from utils import num_parameters, generate_text, get_amp_scaler_and_autocast
 from configs import (
     TrainConfig,
     ModelConfig_3M,
@@ -98,21 +98,22 @@ def get_llama_config(config, tokenizer) -> LlamaConfig:
     )
 
 
-def compute_batch_loss(model, batch, loss_fn, device):
+def compute_batch_loss(model, batch, loss_fn, device, autocast_ctx):
     """
     Compute the loss for a batch of data.
     """
-    input_ids = batch["input_ids"].to(device)
-    labels = batch["labels"].to(device)
-    attention_mask = batch["attention_mask"].to(device)
-    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-    logits = outputs.logits
-    loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
+    with autocast_ctx:
+        input_ids = batch["input_ids"].to(device)
+        labels = batch["labels"].to(device)
+        attention_mask = batch["attention_mask"].to(device)
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        logits = outputs.logits
+        loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
 
     return loss
 
 
-def evaluate(model, loss_fn, val_dataloader, device):
+def evaluate(model, loss_fn, val_dataloader, device, autocast_ctx):
     """
     Evaluate the model on the validation set.
     """
@@ -120,7 +121,7 @@ def evaluate(model, loss_fn, val_dataloader, device):
     total_loss = 0
     with torch.no_grad():
         for batch in val_dataloader:
-            loss = compute_batch_loss(model, batch, loss_fn, device)
+            loss = compute_batch_loss(model, batch, loss_fn, device, autocast_ctx)
             total_loss += loss.item()
     avg_loss = total_loss / len(val_dataloader)
     perplexity = torch.exp(torch.tensor(avg_loss))
@@ -138,6 +139,8 @@ def train(
     optimizer,
     lr_scheduler,
     output_dir,
+    scaler,
+    autocast_ctx,
 ):
     """
     Train the model on a single GPU.
@@ -152,9 +155,15 @@ def train(
     model.train()
     for epoch in range(config.num_epochs):
         for step, batch in enumerate(train_dataloader, start=1):
-            loss = compute_batch_loss(model, batch, loss_fn, config.device)
+            loss = compute_batch_loss(
+                model, batch, loss_fn, config.device, autocast_ctx
+            )
             loss = loss / gradient_accumulation_steps
-            loss.backward()
+
+            if scaler is not None:
+                scaler.scale(loss).backward()
+            else:
+                loss.backward()
 
             if step % 100 == 0:
                 tqdm.write(
@@ -162,8 +171,17 @@ def train(
                 )
 
             if step % gradient_accumulation_steps == 0:
+                if scaler is not None:
+                    scaler.unscale_(optimizer)
+
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                optimizer.step()
+
+                if scaler is not None:
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    optimizer.step()
+
                 lr_scheduler.step()
                 optimizer.zero_grad()
                 effective_steps += 1
@@ -177,7 +195,7 @@ def train(
 
             if (step % (config.eval_steps * gradient_accumulation_steps)) == 0:
                 val_loss, perplexity = evaluate(
-                    model, loss_fn, val_dataloader, config.device
+                    model, loss_fn, val_dataloader, config.device, autocast_ctx
                 )
                 tqdm.write(f"loss/val: {val_loss:.4f} | perplexity: {perplexity:.2f}")
                 wandb.log({"val_loss": val_loss, "perplexity": perplexity})
@@ -235,6 +253,8 @@ def main(args):
     print(
         f"Loaded {len(train_dataset)} training samples and {len(val_dataset)} validation samples"
     )
+    if train_config.device.type == "cuda":
+        print(f"Mixed precision dtype: {train_config.dtype}")
 
     # Create dataloaders
     collate_fn = CollateFn(tokenizer, train_config.block_size)
@@ -275,6 +295,11 @@ def main(args):
         num_training_steps=train_config.total_iterations,
     )
 
+    # Get AMP scaler and autocast context for mixed precision training
+    scaler, autocast_ctx = get_amp_scaler_and_autocast(
+        train_config.device, train_config.dtype
+    )
+
     print(f"Training {num_parameters(model) / 1e6:.2f}M parameters")
     print("Starting training...")
     train(
@@ -287,6 +312,8 @@ def main(args):
         optimizer,
         lr_scheduler,
         output_dir,
+        scaler,
+        autocast_ctx,
     )
 
     wandb.finish()
