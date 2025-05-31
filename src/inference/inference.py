@@ -38,6 +38,7 @@ def main(args):
         top_k=args.top_k,
         do_sample=True,
         streamer=streamer,
+        no_repeat_ngram_size=4,
     )
     thread = Thread(target=model.generate, kwargs=generation_kwargs)
     thread.start()
