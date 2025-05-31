@@ -70,6 +70,12 @@ def create_parquet_dataset(folder_path: str, repo_name: str):
 
 def main(args):
     # Make sure the jsonl files in the folder have the correct names 'train.jsonl' and/or 'validation.jsonl'
+    print(f"\nYou are about to process the dataset in folder: '{args.folder_path}'")
+    print(f"Target Hugging Face Hub repo: '{args.repo_name}'")
+    confirm = input("Do you want to continue? [y/N]: ").strip().lower()
+    if confirm != "y":
+        print("Aborted by user.")
+        return
 
     print(f"Pushing the dataset to the Hugging Face Hub repo '{args.repo_name}'...")
 

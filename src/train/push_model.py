@@ -26,6 +26,14 @@ def push_to_hub(model_dir, repo_name):
 
 
 def main(args):
+    print(f"\nYou are about to push the contents of '{args.model_dir}'")
+    print(f"To the Hugging Face Hub repo: '{args.repo_name}'")
+
+    confirm = input("Do you want to continue? [y/N]: ").strip().lower()
+    if confirm != "y":
+        print("Aborted by user.")
+        return
+
     push_to_hub(model_dir=args.model_dir, repo_name=args.repo_name)
 
 
