@@ -36,7 +36,7 @@ PROMPT ?= Il était une fois
 # Evaluation parameters
 EVAL_MODEL_NAME ?= MaxLSB/LeCarnet-3M
 
-.PHONY: env generate-mistral generate-openai translate push-dataset train inference
+.PHONY: env generate-mistral generate-openai translate push-dataset train inference eval push-model
 
 env:
 	@command -v uv >/dev/null 2>&1 || { \
