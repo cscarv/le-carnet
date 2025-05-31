@@ -253,7 +253,7 @@ def main(args):
     print(
         f"Loaded {len(train_dataset)} training samples and {len(val_dataset)} validation samples"
     )
-    if train_config.device.type == "cuda":
+    if train_config.device == "cuda":
         print(f"Mixed precision dtype: {train_config.dtype}")
 
     # Create dataloaders
