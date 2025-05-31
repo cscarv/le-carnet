@@ -16,7 +16,7 @@ from transformers import (
     get_scheduler,
 )
 from utils import num_parameters, generate_text
-from train.configs import (
+from configs import (
     TrainConfig,
     ModelConfig_3M,
     ModelConfig_8M,
