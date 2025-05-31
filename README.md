@@ -2,7 +2,7 @@
 
 ![LeCarnet](./media/lecarnet.png)
 
-**LeCarnet** is a text dataset of **1.4 million** children's stories in **french** using very simple vocabulary, inspired by the English TinyStories dataset. 
+**LeCarnet** is a text dataset of **2 million** children's stories in **french** using very simple vocabulary, inspired by the English TinyStories dataset. 
 The purpose of this work is to provide a reliable, high-quality resource for training and evaluating small language models (SLMs). It is aimed at educational and experimental use. This repository contains the data generation pipeline, as well as the training, evaluation, and inference code that we used.
 
 This dataset was created by synthetically generating French short stories using [Mistral-Small-24B-Instruct-2501](https://huggingface.co/mistralai/Mistral-Small-24B-Instruct-2501)
