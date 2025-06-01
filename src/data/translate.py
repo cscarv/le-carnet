@@ -175,7 +175,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_dir",
         type=Path,
-        default=Path("results/translated"),
+        default=Path("stories/translations"),
         help="Directory for output files.",
     )
     args = parser.parse_args()

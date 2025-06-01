@@ -179,7 +179,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="results/generated/mistral",
+        default="stories/mistral",
         help="Output file path for storing stories.",
     )
     parser.add_argument(

@@ -18,7 +18,7 @@ OPENAI_MODEL         ?= gpt-3.5-turbo
 OPENAI_REQUESTS      ?= 100000
 SPLIT                ?= train
 NLLB_MODEL           ?= facebook/nllb-200-distilled-600M
-FOLDER_PATH          ?= ./backup/
+FOLDER_PATH          ?= dataset/
 REPO_NAME            ?= MaxLSB/LeCarnet
 
 # Train parameters

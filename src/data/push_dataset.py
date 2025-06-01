@@ -92,7 +92,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--folder_path",
         type=str,
-        default="backup/",
+        default="dataset/",
         help="Path to the folder containing the JSONL files.",
     )
     parser.add_argument(
