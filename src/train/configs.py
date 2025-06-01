@@ -9,7 +9,7 @@ class TrainConfig:
     output_dir: str = "LeCarnet-3M/"
     load_checkpoint_path: str = "LeCarnet-3M/checkpoints/checkpoint-epoch-1.pt"
     load_checkpoint: bool = False
-    mixed_precision: bool = False
+    mixed_precision: bool = True
     cache_dir: str = "cache/"
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     eval_steps: int = 2000
