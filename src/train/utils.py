@@ -45,10 +45,13 @@ def get_mixed_precision_dtype():
         return torch.float32
 
 
-def get_amp_scaler_and_autocast(device: str, dtype: torch.dtype):
+def get_amp_scaler_and_autocast(device: str, mixed_precision: bool):
     """
     Get the appropriate scaler and autocast context for mixed precision training.
     """
+    if not mixed_precision:
+        return None, nullcontext()
+    dtype = get_mixed_precision_dtype()
     device = torch.device(device)
     if device.type == "cuda" and dtype is not None:
         autocast_ctx = torch.amp.autocast(device_type=device.type, dtype=dtype)

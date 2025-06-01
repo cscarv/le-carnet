@@ -7,7 +7,11 @@ from utils import get_mixed_precision_dtype
 class TrainConfig:
     dataset_name: str = "MaxLSB/LeCarnet"
     tokenizer_name: str = "lightonai/pagnol-small"
-    output_dir: str = "checkpoints/"
+    output_dir: str = "LeCarnet-3M/model_weights/"
+    save_checkpoint_dir: str = "LeCarnet-3M/checkpoints/"
+    load_checkpoint_path: str = "LeCarnet-3M/checkpoints/checkpoint-epoch-1.pt"
+    load_checkpoint: bool = False
+    mixed_precision: bool = False
     cache_dir: str = "cache/"
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     eval_steps: int = 2000
@@ -19,7 +23,22 @@ class TrainConfig:
     num_epochs: int = 5
     block_size: int = 512
     num_workers: int = 4
-    dtype = get_mixed_precision_dtype()
+
+
+@dataclass
+class CustomConfig:
+    hidden_size: int = 512
+    intermediate_size: int = 2048
+    num_hidden_layers: int = 8
+    num_attention_heads: int = 16
+    hidden_act: str = "silu"
+    block_size: int = 512
+    max_position_embeddings: int = 2048
+    initializer_range: float = 0.041666666666666664
+    rms_norm_eps: float = 1e-6
+    rope_theta: float = 10000.0
+    attention_bias: bool = False
+    tie_word_embeddings: bool = True
 
 
 @dataclass

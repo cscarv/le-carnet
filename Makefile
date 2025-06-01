@@ -26,7 +26,7 @@ MODEL_CONFIG ?= 3M
 
 # Push Model parameters
 HF_REPO ?= MaxLSB/LeCarnet-3M
-MODEL_DIR ?= checkpoints/3M
+MODEL_DIR ?= LeCarnet-3M/model_weights/
 
 # Inference parameters
 MODEL_NAME ?= MaxLSB/LeCarnet-3M

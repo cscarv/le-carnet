@@ -15,9 +15,15 @@ from transformers import (
     LlamaForCausalLM,
     get_scheduler,
 )
-from utils import num_parameters, generate_text, get_amp_scaler_and_autocast
+from utils import (
+    num_parameters,
+    generate_text,
+    get_amp_scaler_and_autocast,
+    get_mixed_precision_dtype,
+)
 from configs import (
     TrainConfig,
+    CustomConfig,
     ModelConfig_3M,
     ModelConfig_8M,
     ModelConfig_21M,
@@ -25,6 +31,7 @@ from configs import (
 
 
 MODEL_CONFIG_CLASSES = {
+    "custom": CustomConfig,
     "3M": ModelConfig_3M,
     "8M": ModelConfig_8M,
     "21M": ModelConfig_21M,
@@ -47,8 +54,12 @@ class Tokenizer:
 
 
 def get_dataset(dataset_name, cache_dir):
-    train_dataset = load_dataset(dataset_name, split="train", cache_dir=cache_dir)
-    val_dataset = load_dataset(dataset_name, split="validation", cache_dir=cache_dir)
+    train_dataset = load_dataset(
+        dataset_name, split="train", cache_dir=cache_dir
+    ).select(range(128))
+    val_dataset = load_dataset(
+        dataset_name, split="validation", cache_dir=cache_dir
+    ).select(range(128))
     return train_dataset, val_dataset
 
 
@@ -138,22 +149,38 @@ def train(
     val_dataloader,
     optimizer,
     lr_scheduler,
-    output_dir,
     scaler,
     autocast_ctx,
 ):
     """
     Train the model on a single GPU.
     """
-    # Training loop
-    gradient_accumulation_steps = config.gradient_accumulation_steps
-    effective_steps = 0
-    start_context = "Il était une fois"
-    best_val_loss = float("inf")
-    pbar = tqdm(total=config.total_iterations, desc="Training")
+    # Load checkpoint if exists
+    if config.load_checkpoint and os.path.exists(config.load_checkpoint_path):
+        print("Loading checkpoint from:", config.load_checkpoint_path)
+        checkpoint = torch.load(config.load_checkpoint_path, map_location=config.device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
+        if scaler is not None:
+            scaler.load_state_dict(checkpoint["scaler_state_dict"])
+        start_epoch = checkpoint["epoch"] + 1
+        effective_steps = checkpoint["effective_steps"]
+        best_val_loss = checkpoint["best_val_loss"]
+        print(
+            f"Checkpoint loaded! Resuming from epoch {start_epoch}, effective_steps {effective_steps}"
+        )
+    else:
+        start_epoch = 0
+        effective_steps = 0
+        best_val_loss = float("inf")
 
+    gradient_accumulation_steps = config.gradient_accumulation_steps
+    start_context = "Il était une fois"
+    pbar = tqdm(total=config.total_iterations, initial=effective_steps, desc="Training")
     model.train()
-    for epoch in range(config.num_epochs):
+
+    for epoch in range(start_epoch, config.num_epochs):
         for step, batch in enumerate(train_dataloader, start=1):
             loss = compute_batch_loss(
                 model, batch, loss_fn, config.device, autocast_ctx
@@ -208,12 +235,29 @@ def train(
                 )
                 print(f"Generated sample: {generated_text}")
 
+                # Save the best model based on validation loss
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
                     tqdm.write(f"New best validation loss: {best_val_loss:.4f}")
-                    os.makedirs(output_dir, exist_ok=True)
-                    model.save_pretrained(output_dir)
-                    tokenizer.save_pretrained(output_dir)
+                    os.makedirs(config.output_dir, exist_ok=True)
+                    model.save_pretrained(config.output_dir)
+                    tokenizer.save_pretrained(config.output_dir)
+
+        # Save checkpoint at the end of each epoch
+        checkpoint = {
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "lr_scheduler_state_dict": lr_scheduler.state_dict(),
+            "scaler_state_dict": scaler.state_dict() if scaler is not None else None,
+            "epoch": epoch,
+            "effective_steps": effective_steps,
+            "best_val_loss": best_val_loss,
+        }
+        os.makedirs(config.save_checkpoint_dir, exist_ok=True)
+        torch.save(
+            checkpoint, config.save_checkpoint_dir + f"checkpoint-epoch-{epoch}.pt"
+        )
+        print(f"Checkpoint saved at epoch {epoch}, effective_steps {effective_steps}.")
 
     pbar.close()
     tqdm.write("Training complete.")
@@ -225,9 +269,6 @@ def main(args):
     """
     # Train config
     train_config = TrainConfig()
-
-    # Set the output directory
-    output_dir = os.path.join(train_config.output_dir, args.model_config)
 
     # Make sure the Hugging Face token is set
     if not os.getenv("HF_TOKEN"):
@@ -249,12 +290,13 @@ def main(args):
     print(f"Using device: {train_config.device}")
     print(f"Config: {args.model_config}")
     print(f"Tokenizer: {train_config.tokenizer_name}")
-    print(f"Output directory: {output_dir}")
+    print(f"Output directory: {train_config.output_dir}")
+    print(f"Checkpoint save directory: {train_config.save_checkpoint_dir}")
     print(
         f"Loaded {len(train_dataset)} training samples and {len(val_dataset)} validation samples"
     )
-    if train_config.device == "cuda":
-        print(f"Mixed precision dtype: {train_config.dtype}")
+    if train_config.mixed_precision:
+        print(f"Using mixed precision: {get_mixed_precision_dtype()}")
 
     # Create dataloaders
     collate_fn = CollateFn(tokenizer, train_config.block_size)
@@ -297,7 +339,7 @@ def main(args):
 
     # Get AMP scaler and autocast context for mixed precision training
     scaler, autocast_ctx = get_amp_scaler_and_autocast(
-        train_config.device, train_config.dtype
+        train_config.device, train_config.mixed_precision
     )
 
     print(f"Training {num_parameters(model) / 1e6:.2f}M parameters")
@@ -311,7 +353,6 @@ def main(args):
         val_dataloader,
         optimizer,
         lr_scheduler,
-        output_dir,
         scaler,
         autocast_ctx,
     )
@@ -326,7 +367,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_config",
         type=str,
-        choices=["3M", "8M", "21M"],
+        choices=["custom", "3M", "8M", "21M"],
         default="3M",
         help="Size of the model to train.",
     )
