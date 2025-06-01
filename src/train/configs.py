@@ -1,6 +1,5 @@
 import torch
 from dataclasses import dataclass
-from utils import get_mixed_precision_dtype
 
 
 @dataclass
