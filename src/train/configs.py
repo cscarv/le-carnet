@@ -6,8 +6,7 @@ from dataclasses import dataclass
 class TrainConfig:
     dataset_name: str = "MaxLSB/LeCarnet"
     tokenizer_name: str = "lightonai/pagnol-small"
-    output_dir: str = "LeCarnet-3M/model_weights/"
-    save_checkpoint_dir: str = "LeCarnet-3M/checkpoints/"
+    output_dir: str = "LeCarnet-3M/"
     load_checkpoint_path: str = "LeCarnet-3M/checkpoints/checkpoint-epoch-1.pt"
     load_checkpoint: bool = False
     mixed_precision: bool = False

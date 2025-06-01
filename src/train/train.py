@@ -239,9 +239,9 @@ def train(
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
                     tqdm.write(f"New best validation loss: {best_val_loss:.4f}")
-                    os.makedirs(config.output_dir, exist_ok=True)
-                    model.save_pretrained(config.output_dir)
-                    tokenizer.save_pretrained(config.output_dir)
+                    os.makedirs(config.output_dir + "model_weights/", exist_ok=True)
+                    model.save_pretrained(config.output_dir + "model_weights/")
+                    tokenizer.save_pretrained(config.output_dir + "model_weights/")
 
         # Save checkpoint at the end of each epoch
         checkpoint = {
@@ -253,11 +253,11 @@ def train(
             "effective_steps": effective_steps,
             "best_val_loss": best_val_loss,
         }
-        os.makedirs(config.save_checkpoint_dir, exist_ok=True)
+        os.makedirs(config.output_dir + "checkpoints/", exist_ok=True)
         torch.save(
-            checkpoint, config.save_checkpoint_dir + f"checkpoint-epoch-{epoch}.pt"
+            checkpoint, config.output_dir + f"checkpoints/checkpoint-epoch-{epoch}.pt"
         )
-        print(f"Checkpoint saved at epoch {epoch}, effective_steps {effective_steps}.")
+        print(f"Checkpoint saved at epoch {epoch}, effective_steps {effective_steps}")
 
     pbar.close()
     tqdm.write("Training complete.")
@@ -291,7 +291,6 @@ def main(args):
     print(f"Config: {args.model_config}")
     print(f"Tokenizer: {train_config.tokenizer_name}")
     print(f"Output directory: {train_config.output_dir}")
-    print(f"Checkpoint save directory: {train_config.save_checkpoint_dir}")
     print(
         f"Loaded {len(train_dataset)} training samples and {len(val_dataset)} validation samples"
     )
