@@ -54,12 +54,8 @@ class Tokenizer:
 
 
 def get_dataset(dataset_name, cache_dir):
-    train_dataset = load_dataset(
-        dataset_name, split="train", cache_dir=cache_dir
-    ).select(range(128))
-    val_dataset = load_dataset(
-        dataset_name, split="validation", cache_dir=cache_dir
-    ).select(range(128))
+    train_dataset = load_dataset(dataset_name, split="train", cache_dir=cache_dir)
+    val_dataset = load_dataset(dataset_name, split="validation", cache_dir=cache_dir)
     return train_dataset, val_dataset
 
 
