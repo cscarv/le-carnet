@@ -1,6 +1,22 @@
-# LeCarnet: the french TinyStories
+# LeCarnet
 
-![LeCarnet](./media/lecarnet.png)
+<div align="center">
+  <img src="./media/lecarnet.png" width="100%" alt="LeCarnet Logo" />
+</div>
+<br style="line-height: 12px;" />
+<div align="center" style="line-height: 1;">
+  <a href="https://huggingface.co/datasets/MaxLSB/LeCarnet" target="_blank" style="margin: 2px;">
+    <img alt="LeCarnet Hugging Face Dataset" src="https://img.shields.io/badge/%F0%9F%A4%97%20HuggingFace-LeCarnet-ffc107?color=ffc107&logoColor=white" style="display: inline-block; vertical-align: middle;"/>
+  </a>
+</div>
+
+<div align="center" style="line-height: 1;">
+  <a href="LICENSE" style="margin: 2px;">
+    <img alt="License" src="https://img.shields.io/badge/License-MIT-f5de53?&color=f5de53" style="display: inline-block; vertical-align: middle;"/>
+  </a>
+</div>
+
+## 1. Introduction
 
 **LeCarnet** is a text dataset of **2 million** children's stories in **french** using very simple vocabulary, inspired by the English TinyStories dataset. 
 The purpose of this work is to provide a reliable, high-quality resource for training and evaluating small language models (SLMs). It is aimed at educational and experimental use. This repository contains the data generation pipeline, as well as the training, evaluation, and inference code that we used.
@@ -13,7 +29,7 @@ The dataset and models are available on Hugging Face:
 - [LeCarnet-8M](https://huggingface.co/MaxLSB/LeCarnet-8M)
 - [LeCarnet-21M](https://huggingface.co/MaxLSB/LeCarnet-21M)
 
-## Quick Setup
+## 2. Quick Setup
 
 _Using [`uv`](https://github.com/astral-sh/uv) for fast and reliable dependency management._
 
@@ -26,7 +42,7 @@ make env-gpu
 ```
 That's it, you can now run any command you want!
 
-## Training & Inference
+## 3. Training & Inference
 The training pipeline supports Weights & Biases (WandB) for tracking training and validation losses, as well as perplexity.
 
 | Task        | Make Command       | Equivalent CLI Command                                                                                                                                               | Default Values                                                                 |
@@ -37,7 +53,7 @@ The training pipeline supports Weights & Biases (WandB) for tracking training an
 
 _Check `src/train/configs.py` for fine-grained hyperparameter tuning. MODEL_CONFIG="custom" to use your own custom model config._
 
-## Data Generation
+## 4. Data Generation
 For Generation tasks set your API key (for translation the model runs locally):
 
 **Linux/MacOS:**
@@ -66,6 +82,6 @@ A translation pipeline is available as we experimented with it at first, but cho
 
 _Not all arguments are listed here._
 
-# References
+## 4. References
 
 - [`TinyStories: How Small Can Language Models Be and Still Speak Coherent English?`](https://arxiv.org/pdf/2305.07759)
