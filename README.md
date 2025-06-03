@@ -6,13 +6,16 @@
 <br style="line-height: 12px;" />
 <div align="center" style="line-height: 1;">
   <a href="https://huggingface.co/datasets/MaxLSB/LeCarnet" target="_blank" style="margin: 2px;">
-    <img alt="LeCarnet Hugging Face Dataset" src="https://img.shields.io/badge/%F0%9F%A4%97%20HuggingFace-LeCarnet-ffc107?color=ffc107&logoColor=white" style="display: inline-block; vertical-align: middle;"/>
+    <img alt="LeCarnet Hugging Face Dataset" src="https://img.shields.io/badge/%F0%9F%A4%97%20HuggingFace-Dataset-ffc107?color=ffc107&logoColor=white" style="display: inline-block; vertical-align: middle;"/>
+  </a>
+  <a href="https://huggingface.co/collections/MaxLSB/lecarnet-683d6b6843023b2c88258594" target="_blank" style="margin: 2px;">
+    <img alt="LeCarnet Hugging Face Models" src="https://img.shields.io/badge/%F0%9F%A4%97%20HuggingFace-Models-ffc107?color=ffc107&logoColor=white" style="display: inline-block; vertical-align: middle;"/>
   </a>
 </div>
 
 <div align="center" style="line-height: 1;">
   <a href="LICENSE" style="margin: 2px;">
-    <img alt="License" src="https://img.shields.io/badge/License-MIT-f5de53?&color=f5de53" style="display: inline-block; vertical-align: middle;"/>
+    <img alt="License" src="https://img.shields.io/badge/License-MIT-f5de53?&color=ffffff" style="display: inline-block; vertical-align: middle;"/>
   </a>
 </div>
 
