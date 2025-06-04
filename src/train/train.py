@@ -153,7 +153,7 @@ def train(
     """
     # Load checkpoint if exists
     if config.load_checkpoint and os.path.exists(config.load_checkpoint_path):
-        print("Loading checkpoint from:", config.load_checkpoint_path)
+        tqdm.write(f"Loading checkpoint from {config.load_checkpoint_path}")
         checkpoint = torch.load(config.load_checkpoint_path, map_location=config.device)
         model.load_state_dict(checkpoint["model_state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
@@ -163,7 +163,7 @@ def train(
         start_epoch = checkpoint["epoch"] + 1
         effective_steps = checkpoint["effective_steps"]
         best_val_loss = checkpoint["best_val_loss"]
-        print(
+        tqdm.write(
             f"Checkpoint loaded! Resuming from epoch {start_epoch}, effective_steps {effective_steps}"
         )
     else:
@@ -229,7 +229,7 @@ def train(
                     tokenizer,
                     start_context,
                 )
-                print(f"Generated sample: {generated_text}")
+                tqdm.write(f"Generated text: {generated_text}")
 
                 # Save the best model based on validation loss
                 if val_loss < best_val_loss:
@@ -253,7 +253,9 @@ def train(
         torch.save(
             checkpoint, config.output_dir + f"checkpoints/checkpoint-epoch-{epoch}.pt"
         )
-        print(f"Checkpoint saved at epoch {epoch}, effective_steps {effective_steps}")
+        tqdm.write(
+            f"Checkpoint saved at epoch {epoch}, effective_steps {effective_steps}"
+        )
 
     pbar.close()
     tqdm.write("Training complete.")
@@ -275,7 +277,7 @@ def main(args):
     # Initialize wandb
     wandb.init(project="LeCarnet", name="le-carnet-training-run")
 
-    print("Loading dataset and tokenizer...")
+    tqdm.write("Loading dataset and tokenizer...")
     # Load dataset and tokenizer
     train_dataset, val_dataset = get_dataset(
         train_config.dataset_name, train_config.cache_dir
@@ -283,15 +285,15 @@ def main(args):
     tokenizer = Tokenizer(train_config.tokenizer_name).get_tokenizer()
 
     # Display training information
-    print(f"Using device: {train_config.device}")
-    print(f"Config: {args.model_config}")
-    print(f"Tokenizer: {train_config.tokenizer_name}")
-    print(f"Output directory: {train_config.output_dir}")
-    print(
+    tqdm.write(f"Using device: {train_config.device}")
+    tqdm.write(f"Config: {args.model_config}")
+    tqdm.write(f"Tokenizer: {train_config.tokenizer_name}")
+    tqdm.write(f"Output directory: {train_config.output_dir}")
+    tqdm.write(
         f"Loaded {len(train_dataset)} training samples and {len(val_dataset)} validation samples"
     )
     if train_config.mixed_precision:
-        print(f"Using mixed precision: {get_mixed_precision_dtype()}")
+        tqdm.write(f"Using mixed precision: {get_mixed_precision_dtype()}")
 
     # Create dataloaders
     collate_fn = CollateFn(tokenizer, train_config.block_size)
@@ -337,8 +339,8 @@ def main(args):
         train_config.device, train_config.mixed_precision
     )
 
-    print(f"Training {num_parameters(model) / 1e6:.2f}M parameters")
-    print("Starting training...")
+    tqdm.write(f"Training {num_parameters(model) / 1e6:.2f}M parameters")
+    tqdm.write("Starting training...")
     train(
         train_config,
         model,
