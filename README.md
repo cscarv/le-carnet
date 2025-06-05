@@ -74,13 +74,10 @@ $env:MISTRAL_API_KEY="your_api_key"
 $env:OPENAI_API_KEY="your_api_key"
 ```
 
-A translation pipeline is available as we experimented with it at first, but chose to focus on the generation from scratch using Mistral.
-
 | Task                          | Make Command           | Equivalent CLI Command                                                                                                                                               | Default Values                                                                                     |
 |-------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
-| Generate with Mistral         | `make generate-mistral`| `python src/data/mistral.py --model_name MISTRAL_MODEL --total_requests MISTRAL_REQUESTS, --num_workers NUM_WORKERS`                                              | `MISTRAL_MODEL=mistral-small-2501`, `MISTRAL_REQUESTS=100000`, `NUM_WORKERS=1`                                               |
+| Generate with Mistral         | `make generate-mistral`| `python src/data/mistral.py --model_name MISTRAL_MODEL --total_requests MISTRAL_REQUESTS, --num_workers NUM_WORKERS`                                              | `MISTRAL_MODEL=mistral-small-2501`, `MISTRAL_REQUESTS=100000`, `NUM_WORKERS=2`                                               |
 | Generate with OpenAI          | `make generate-openai` | `python src/data/openai.py --model_name OPENAI_MODEL --total_requests OPENAI_REQUESTS`                                                   | `OPENAI_MODEL=gpt-3.5-turbo`, `OPENAI_REQUESTS=100000`                                                    |
-| Translate TinyStories Dataset | `make translate`       | `python src/data/translation.py --split SPLIT --model_name NLLB_MODEL`                  | `SPLIT=train`, `NLLB_MODEL=facebook/nllb-200-distilled-600M`                      |
 | Push Dataset to HF            | `make push-dataset`    | `python src/data/push_dataset.py --folder_path FOLDER_PATH --repo_name REPO_NAME`                                           | `FOLDER_PATH=./dataset/`, `REPO_NAME=MaxLSB/LeCarnet`                                                |
 
 _Not all arguments are listed here._
@@ -88,3 +85,4 @@ _Not all arguments are listed here._
 ## 4. References
 
 - [`TinyStories: How Small Can Language Models Be and Still Speak Coherent English?`](https://arxiv.org/pdf/2305.07759)
+- [`Regional Tiny Stories: Using Small Models to Compare Language Learning and Tokenizer Performance`](https://arxiv.org/pdf/2504.07989)

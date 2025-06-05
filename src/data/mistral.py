@@ -31,13 +31,14 @@ def build_message(vocab: Vocabulary):
     verb = vocab.random_choice("verbs")
     noun = vocab.random_choice("nouns")
     adjective = vocab.random_choice("adjectives")
-    feature_1, feature_2 = vocab.random_features(2)
+    feature = vocab.random_choice("features")
 
     prompt = f"""
-    Écris une courte histoire (3 à 5 paragraphes) qui n’utilise que des mots très simples qu’un enfant de 3 ans comprendrait. 
-    L’histoire doit s'articuler autour du « {verb} », du nom « {noun} » et de l’adjectif « {adjective} ». 
-    L'histoire doit avoir les caractéristiques suivantes : {feature_1}, {feature_2}. 
-    Souviens-toi de n’utiliser que des mots simples !"
+    Write a short story in French suitable for 5-to-7-year-old children.
+    Use simple, easy-to-understand words and limit the story to 3-4 short paragraphs (around 200-300 words).
+    The story should feature a clear beginning, middle, and end. Incorporate the verb "{verb}", the noun "{noun}", and the adjective "{adjective}" naturally into the story.
+    The story should also integrate the conclusion/tone ”{feature}” through actions and outcomes, without directly stating the tone.
+    Remember to only use simple words and keep the story short!
     """
     message = [
         {
@@ -59,7 +60,7 @@ def send_message(client, message, model_name):
             resp = client.chat.complete(
                 messages=message,
                 model=model_name,
-                temperature=0.7,
+                temperature=0.8,
                 max_tokens=512,
                 top_p=0.95,
             )
@@ -167,7 +168,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_name",
         type=str,
-        default="mistral-small-2501",
+        default="mistral-small-2503",
         help="Model name to use for generating stories.",
     )
     parser.add_argument(
@@ -185,7 +186,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_workers",
         type=int,
-        default=1,
+        default=4,
         help="Number of worker threads for parallel requests.",
     )
     args = parser.parse_args()

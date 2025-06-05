@@ -3,21 +3,18 @@ PYTHON               := uv run python
 
 MISTRAL_SCRIPT       := src/data/mistral.py
 OPENAI_SCRIPT        := src/data/openai.py
-TRANSLATE_SCRIPT     := src/data/translate.py
-PUSH_DATASET_SCRIPT   := src/data/push_dataset.py
+PUSH_DATASET_SCRIPT  := src/data/push_dataset.py
 TRAIN_SCRIPT         := src/train/train.py
 INFERENCE_SCRIPT     := src/inference/inference.py
-PUSH_MODEL_SCRIPT     := src/train/push_model.py
+PUSH_MODEL_SCRIPT    := src/train/push_model.py
 EVAL_SCRIPT          := src/eval/eval.py
 
 # Data generation parameters
-MISTRAL_MODEL        ?= mistral-small-2501
+MISTRAL_MODEL        ?= mistral-small-2503
 MISTRAL_REQUESTS     ?= 100000
-NUM_WORKERS          ?= 1
+NUM_WORKERS          ?= 4
 OPENAI_MODEL         ?= gpt-3.5-turbo
 OPENAI_REQUESTS      ?= 100000
-SPLIT                ?= train
-NLLB_MODEL           ?= facebook/nllb-200-distilled-600M
 FOLDER_PATH          ?= dataset/
 REPO_NAME            ?= MaxLSB/LeCarnet
 
@@ -36,7 +33,7 @@ PROMPT ?= Il était une fois
 # Evaluation parameters
 EVAL_MODEL_NAME ?= MaxLSB/LeCarnet-3M
 
-.PHONY: env generate-mistral generate-openai translate push-dataset train inference eval push-model
+.PHONY: env generate-mistral generate-openai push-dataset train inference eval push-model
 
 env:
 	@command -v uv >/dev/null 2>&1 || { \
@@ -60,11 +57,6 @@ generate-openai:
 	$(PYTHON) $(OPENAI_SCRIPT) \
 		--model_name $(OPENAI_MODEL) \
 		--total_requests $(OPENAI_REQUESTS)
-
-translate:
-	$(PYTHON) $(TRANSLATE_SCRIPT) \
-		--split $(SPLIT) \
-		--model_name $(NLLB_MODEL)
 
 push-dataset:
 	$(PYTHON) $(PUSH_DATASET_SCRIPT) \

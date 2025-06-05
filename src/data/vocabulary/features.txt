@@ -1,12 +1,10 @@
-L’histoire a au moins un dialogue
-L’histoire a une mauvaise fin
-L’histoire a une morale simple
-L’histoire a un rebondissement
-L’histoire commence par un problème à résoudre
-L’histoire a une fin heureuse
-L’histoire a une fin ouverte
-L’histoire inclut un personnage qui aide le héros
-L’histoire commence par un rêve
-L’histoire parle d’une amitié
-L’histoire contient un moment drôle
-L’histoire parle d’une découverte
+The story has at least one dialogue  
+The story has a bad ending  
+The story has a simple moral  
+The story has a twist  
+The story starts with a problem to solve  
+The story has a happy ending  
+The story has an open ending  
+The story is about a friendship  
+The story contains a funny moment  
+The story is about a discovery  

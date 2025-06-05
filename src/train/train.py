@@ -77,6 +77,7 @@ class CollateFn:
 
         input_encodings["labels"] = input_encodings["input_ids"].clone()
         input_encodings["labels"][:, :-1] = input_encodings["input_ids"][:, 1:]
+        input_encodings["labels"][:, -1] = self.tokenizer.pad_token_id
 
         return input_encodings
 

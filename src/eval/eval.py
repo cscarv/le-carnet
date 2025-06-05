@@ -142,6 +142,13 @@ def tokenize_prompt(prompt, tokenizer):
 
 
 def main(args):
+    # Check if the API key is set in the environment variables
+    api_key = os.getenv("MISTRAL_API_KEY")
+    if not api_key:
+        raise ValueError(
+            f"API key not found. Set the MISTRAL_API_KEY environment variable."
+        )
+
     # Load the model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     model = AutoModelForCausalLM.from_pretrained(args.model_name).to(args.device)
@@ -159,11 +166,11 @@ def main(args):
         generation_kwargs = dict(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            max_new_tokens=100,
+            max_new_tokens=512,
             temperature=0.1,
             top_k=50,
             do_sample=True,
-            pad_token_id=tokenizer.eos_token_id,
+            no_repeat_ngram_size=4,
         )
 
         output = model.generate(**generation_kwargs)
@@ -173,14 +180,7 @@ def main(args):
 
         eval_part = prompt + generated_part
 
-        api_key = os.getenv("MISTRAL_API_KEY")
-        if not api_key:
-            raise ValueError(
-                f"API key not found. Set the MISTRAL_API_KEY environment variable."
-            )
-
         client = get_client(api_key=api_key)
-
         grade = eval_story(client, eval_part, args.eval_model_name)
 
         if len(grade) != 4:
