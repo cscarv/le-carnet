@@ -6,7 +6,7 @@ import jsonlines
 import argparse
 from mistralai import Mistral
 from mistralai.models.sdkerror import SDKError
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 
 class Vocabulary:
@@ -54,6 +54,11 @@ def get_client(api_key: str):
 
 
 def send_message(client, message, model_name):
+    """
+    Sends a message to the Mistral API with retries and exponential backoff.
+    Adds a small random delay to stagger requests.
+    """
+    time.sleep(random.uniform(0.1, 0.5))  # Stagger requests to avoid rate limit spikes
     backoff = 1.0
     for attempt in range(5):  # 5 attempts total
         try:
@@ -64,7 +69,6 @@ def send_message(client, message, model_name):
                 max_tokens=512,
                 top_p=0.95,
             )
-
             return resp.choices[0].message.content
         except SDKError as e:
             if getattr(e, "status_code", None) == 429 and attempt < 4:
@@ -73,7 +77,6 @@ def send_message(client, message, model_name):
                 backoff *= 2
             else:
                 raise e
-
     raise RuntimeError("Max retries reached")
 
 
@@ -100,7 +103,9 @@ def generate_stories(
     """
     start = time.time()
     stories_buffer = []
-    # Create a thread pool for parallel requests
+    success_count = 0
+    failure_count = 0
+
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
         futures = [
             executor.submit(send_message, client, build_message(vocab), model_name)
@@ -108,10 +113,15 @@ def generate_stories(
         ]
 
         for future in tqdm(futures, desc="Generating stories", total=total_requests):
-            story = future.result()
-            stories_buffer.append(story)
+            try:
+                story = future.result(timeout=60)
+                stories_buffer.append(story)
+                success_count += 1
+            except FuturesTimeoutError:
+                pass
+            except Exception as e:
+                pass
 
-            # Save every 50 stories
             if len(stories_buffer) >= 50:
                 save_stories_to_jsonl(stories_buffer, output_file)
                 stories_buffer.clear()
@@ -181,7 +191,7 @@ if __name__ == "__main__":
         "--output_dir",
         type=str,
         default="stories/mistral",
-        help="Output file path for storing stories.",
+        help="Output directory for storing stories.",
     )
     parser.add_argument(
         "--num_workers",
