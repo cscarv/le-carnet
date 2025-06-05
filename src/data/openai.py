@@ -38,7 +38,7 @@ def build_batch(vocab: Vocabulary, batch_size: int) -> list[list[dict]]:
         prompt = f"""
         Write a short story in French suitable for 5-to-7-year-old children.
         Use simple, easy-to-understand words and limit the story to 3-4 short paragraphs (around 200-300 words).
-        The story should feature a clear beginning, middle, and end. Incorporate the verb "{verb}", the noun "{noun}", and the adjective "{adjective}" naturally into the story.
+        The story should feature a clear beginning, middle, and end. Use the verb '{verb}', the noun '{noun}', and the adjective '{adjective}' as central elements of the story.
         The story should also integrate the conclusion/tone ”{feature}” through actions and outcomes, without directly stating the tone.
         Remember to only use simple words and keep the story short!
         """

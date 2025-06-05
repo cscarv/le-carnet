@@ -12,7 +12,7 @@ EVAL_SCRIPT          := src/eval/eval.py
 # Data generation parameters
 MISTRAL_MODEL        ?= mistral-small-2503
 MISTRAL_REQUESTS     ?= 100000
-NUM_WORKERS          ?= 4
+NUM_WORKERS          ?= 3
 OPENAI_MODEL         ?= gpt-3.5-turbo
 OPENAI_REQUESTS      ?= 100000
 FOLDER_PATH          ?= dataset/
