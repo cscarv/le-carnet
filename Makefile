@@ -44,9 +44,6 @@ env:
 	@uv sync --python $(PYTHON_VERSION)
 	@echo "Environment ready."
 
-env-gpu: env
-	@uv sync --extra gpu
-
 generate-mistral:
 	$(PYTHON) $(MISTRAL_SCRIPT) \
 		--model_name $(MISTRAL_MODEL) \
