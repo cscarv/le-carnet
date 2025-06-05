@@ -103,8 +103,6 @@ def generate_stories(
     """
     start = time.time()
     stories_buffer = []
-    success_count = 0
-    failure_count = 0
 
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
         futures = [
@@ -116,7 +114,6 @@ def generate_stories(
             try:
                 story = future.result(timeout=60)
                 stories_buffer.append(story)
-                success_count += 1
             except FuturesTimeoutError:
                 pass
             except Exception as e:
