@@ -273,7 +273,6 @@ honteux
 indécis
 légendaire
 moelleux
-moucheté
 naïf
 ombragé
 ordinaire
@@ -368,7 +367,6 @@ exaspéré
 fuyant
 géné
 glacial
-haché
 incomplet
 isolé
 accablé
@@ -390,8 +388,6 @@ cordial
 craint
 croustillant
 dégoûté
-déjanté
-déplacé
 désespéré
 désolé
 effrayé
