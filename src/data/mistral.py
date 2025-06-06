@@ -20,9 +20,6 @@ class Vocabulary:
     def random_choice(self, category):
         return random.choice(getattr(self, category))
 
-    def random_features(self, count=2):
-        return random.sample(self.features, count)
-
 
 def build_message(vocab: Vocabulary):
     """
