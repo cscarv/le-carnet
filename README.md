@@ -13,12 +13,6 @@
   </a>
 </div>
 
-<div align="center" style="line-height: 1;">
-  <a href="LICENSE" style="margin: 2px;">
-    <img alt="License" src="https://img.shields.io/badge/License-MIT-f5de53?&color=ffffff" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-</div>
-
 ## 1. Introduction
 
 **LeCarnet** is a text dataset of **2 million** children's stories in **french** using very simple vocabulary, inspired by the English TinyStories dataset. 
