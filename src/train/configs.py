@@ -13,7 +13,7 @@ class TrainConfig:
     cache_dir: str = "cache/"
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     eval_steps: int = 5000
-    gradient_accumulation_steps: int = 4
+    gradient_accumulation_steps: int = 2
     train_batch_size: int = 16
     eval_batch_size: int = 16
     learning_rate: float = 5e-4

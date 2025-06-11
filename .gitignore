@@ -19,3 +19,4 @@ LeCarnet-custom/
 stories/
 dataset/
 .DS_Store
+eval_results/
