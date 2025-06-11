@@ -6,9 +6,9 @@ from dataclasses import dataclass
 class TrainConfig:
     dataset_name: str = "MaxLSB/LeCarnet"
     tokenizer_name: str = "lightonai/pagnol-small"
-    output_dir: str = "LeCarnet-8M/"
-    load_checkpoint_path: str = "LeCarnet-8M/checkpoints/checkpoint-epoch-8.pt"
-    load_checkpoint: bool = True
+    output_dir: str = "LeCarnet-3M/"
+    load_checkpoint_path: str = "LeCarnet-3M/checkpoints/checkpoint-epoch-0.pt"
+    load_checkpoint: bool = False
     mixed_precision: bool = True
     cache_dir: str = "cache/"
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
