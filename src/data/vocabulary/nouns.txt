@@ -434,7 +434,6 @@ rafale
 raclette
 robinet
 radiateur
-lapinou
 lutin
 sorcière
 magie
