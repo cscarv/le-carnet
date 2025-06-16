@@ -118,7 +118,7 @@ def generate_stories(
             except Exception as e:
                 pass
 
-            if len(stories_buffer) >= 1:
+            if len(stories_buffer) >= 100:
                 save_stories_to_jsonl(stories_buffer, output_file)
                 stories_buffer.clear()
 
