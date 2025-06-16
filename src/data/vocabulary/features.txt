@@ -1,7 +1,7 @@
-the story has a happy ending
-the story should contain at least one dialogue
-the story has a bad ending
-the story has a plot twist
-the story has a moral value
-the story has a foreshadowing
-the story has a conflict
+L'histoire a une fin heureuse
+L'histoire doit contenir au moins un dialogue
+L'histoire a une fin triste
+L'histoire contient un rebondissement
+L'histoire contient une valeur morale
+L'histoire contient un élément annonciateur
+L'histoire contient un conflit
