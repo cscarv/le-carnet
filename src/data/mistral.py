@@ -31,12 +31,13 @@ def build_message(vocab: Vocabulary):
     feature = vocab.random_choice("features")
 
     prompt = f"""
-    Écris une histoire courte en utilisant seulement des mots simples adaptés à un enfant de 10 ans.
-    L’histoire doit avoir un début, un milieu et une fin bien clairs.
+    Écris une courte histoire en français adaptée à des enfants de 5 à 7 ans.
+    Utilise des mots simples et faciles à comprendre.
+    L'histoire doit rester logique et cohérente.
     Limite l'histoire à 2 ou 3 courts paragraphes (environ 100 à 150 mots).
     Intègre naturellement le verbe «{verb}», le nom «{noun}» et l’adjectif «{adjective}».
     L’histoire doit avoir la caractéristique suivante : {feature}.
-    N’oublie pas d’utiliser uniquement des mots simples !
+    N’oublie pas d’utiliser uniquement des mots simples et de garder l’histoire courte !
     """
 
     message = [
