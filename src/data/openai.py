@@ -36,13 +36,13 @@ def build_batch(vocab: Vocabulary, batch_size: int) -> list[list[dict]]:
         feature = vocab.random_choice("features")
 
         prompt = f"""
-        Write a short story in French suitable for 5-to-7-year-old children.
-        Use simple words but prioritize correct French grammar.
-        The story should feature a clear beginning, middle, and end.
-        Limit the story to 2-3 short paragraphs (around 100-150 words).
-        Incorporate the verb ”{verb}”, the noun ”{noun}”, and the adjective ”{adjective}” naturally into the story.
-        The story should have the following feature: {feature}.
-        Remember to only use simple words and keep the story short!
+        Écris une courte histoire en français adaptée à des enfants de 5 à 7 ans.
+        Utilise des mots simples.
+        L'histoire doit être cohérente et comporter un début, un milieu et une fin clairs.
+        Limite l'histoire à 2 ou 3 courts paragraphes (environ 100 à 150 mots).
+        Intègre naturellement le verbe «{verb}», le nom «{noun}» et l’adjectif «{adjective}».
+        L’histoire doit avoir la caractéristique suivante : {feature}.
+        N’oublie pas d’utiliser uniquement des mots simples et de garder l’histoire courte !
         """
 
         batch.append([{"role": "user", "content": prompt}])
