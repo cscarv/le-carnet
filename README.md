@@ -36,6 +36,12 @@ make env
 ```
 That's it, you can now run any command you want!
 
+⚠️ On some machines, you might need to perform the following two steps manually before running `make env`:
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env
+```
+
 ## 3. Training & Inference
 The training pipeline supports Weights & Biases (WandB) for tracking training and validation losses, as well as perplexity.
 
@@ -45,7 +51,7 @@ The training pipeline supports Weights & Biases (WandB) for tracking training an
 | Inference   | `make inference`   | `python src/inference/inference.py --model_name MODEL_NAME --prompt PROMPT --max_new_tokens MAX_NEW_TOKENS`                                              | `MODEL_NAME=MaxLSB/LeCarnet-3M`, `PROMPT="Il était une fois"`, `MAX_NEW_TOKENS=512` |
 | Push Model to HF   | `make push-model`   | `python src/inference/push-model.py --repo_name HF_REPO --model_dir MODEL_DIR`                                              | `HF_REPO=MaxLSB/LeCarnet-3M`, `MODEL_DIR=LeCarnet-3M/model_weights/` |
 
-_Check `src/train/configs.py` for fine-grained hyperparameter tuning. MODEL_CONFIG="custom" to use your own custom model config._
+⚠️ Check `src/train/configs.py` for fine-grained hyperparameter tuning. MODEL_CONFIG="custom" to use your own custom model config.
 
 ## 4. Data Generation
 For Generation tasks set your API key (for translation the model runs locally):
