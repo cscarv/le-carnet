@@ -37,8 +37,8 @@ def build_batch(vocab: Vocabulary, batch_size: int) -> list[list[dict]]:
 
         prompt = f"""
         Écris une courte histoire en français adaptée à des enfants de 5 à 7 ans.
-        Utilise des mots simples.
-        L'histoire doit être cohérente et comporter un début, un milieu et une fin clairs.
+        Utilise des mots simples et faciles à comprendre.
+        L'histoire doit rester logique et cohérente.
         Limite l'histoire à 2 ou 3 courts paragraphes (environ 100 à 150 mots).
         Intègre naturellement le verbe «{verb}», le nom «{noun}» et l’adjectif «{adjective}».
         L’histoire doit avoir la caractéristique suivante : {feature}.
