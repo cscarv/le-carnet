@@ -36,10 +36,10 @@ def build_batch(vocab: Vocabulary, batch_size: int) -> list[list[dict]]:
         feature = vocab.random_choice("features")
 
         prompt = f"""
-        Écris une histoire courte en utilisant seulement des mots simples qu’un enfant de 8 ans pourrait comprendre.
+        Écris une histoire courte en utilisant seulement des mots simples adaptés à un enfant de 10 ans.
+        L’histoire doit avoir un début, un milieu et une fin bien clairs.
         Limite l'histoire à 2 ou 3 courts paragraphes (environ 100 à 150 mots).
-        L’histoire doit être cohérente, avec un début, un milieu et une fin bien clairs.
-        Intègre naturellement le verbe «{verb}», le nom «{noun}» et l’adjectif «{adjective}»  dans l'histoire.
+        Intègre naturellement le verbe «{verb}», le nom «{noun}» et l’adjectif «{adjective}».
         L’histoire doit avoir la caractéristique suivante : {feature}.
         N’oublie pas d’utiliser uniquement des mots simples !
         """
