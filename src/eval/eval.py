@@ -159,7 +159,7 @@ def get_dataset(name: str, split: str = "test", cache_dir: str = None):
 def save_results_to_json(
     output_dir: str,
     model_name: str,
-    eval_model_name: str,
+    judge_model_name: str,
     grades_dict: dict[str, float],
 ) -> None:
     """Save the evaluation results to a JSON file."""
@@ -169,7 +169,7 @@ def save_results_to_json(
     if os.path.isfile(out_path):
         with open(out_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-    data[eval_model_name] = grades_dict
+    data[judge_model_name] = grades_dict
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     print(f"Results saved to {out_path}")
@@ -201,7 +201,7 @@ def main(args):
     with ThreadPoolExecutor(max_workers=args.num_workers) as executor:
         future_to_index = {
             executor.submit(
-                eval_story, get_client(api_key), full_text, args.eval_model_name
+                eval_story, get_client(api_key), full_text, args.judge_model_name
             ): i
             for i, full_text in enumerate(completions)
         }
@@ -241,7 +241,7 @@ def main(args):
     save_results_to_json(
         args.output_dir,
         args.model_name,
-        args.eval_model_name,
+        args.judge_model_name,
         grades_dict,
     )
 
@@ -263,15 +263,9 @@ if __name__ == "__main__":
         help="Dataset name to use for evaluation (HF repo).",
     )
     parser.add_argument(
-        "--device",
+        "--judge_model_name",
         type=str,
-        default="cuda" if torch.cuda.is_available() else "cpu",
-        help="Device to run the model on.",
-    )
-    parser.add_argument(
-        "--eval_model_name",
-        type=str,
-        default="mistral-small-2503",
+        default="mistral-large-2411",
         help="Judge model name to use for evaluation.",
     )
     parser.add_argument(
@@ -288,6 +282,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--batch_size", type=int, default=4, help="Batch size for story generation."
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda" if torch.cuda.is_available() else "cpu",
+        help="Device to run the model on.",
     )
     args = parser.parse_args()
     main(args)

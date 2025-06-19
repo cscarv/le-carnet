@@ -80,7 +80,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max_new_tokens",
         type=int,
-        default=256,
+        default=512,
         help="Length of the generated text",
     )
     parser.add_argument(

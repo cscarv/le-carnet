@@ -9,12 +9,16 @@ INFERENCE_SCRIPT     := src/inference/inference.py
 PUSH_MODEL_SCRIPT    := src/train/push_model.py
 EVAL_SCRIPT          := src/eval/eval.py
 
-# Data generation parameters
+# Mistral Data generation parameters
 MISTRAL_MODEL        ?= mistral-large-2411
 MISTRAL_REQUESTS     ?= 100000
 NUM_WORKERS          ?= 4
+
+# OpenAI Data generation parameters
 OPENAI_MODEL         ?= gpt-3.5-turbo
 OPENAI_REQUESTS      ?= 100000
+
+# Push Dataset parameters
 FOLDER_PATH          ?= dataset/
 REPO_NAME            ?= MaxLSB/LeCarnet
 
@@ -31,7 +35,8 @@ MAX_NEW_TOKENS ?= 512
 PROMPT ?= Il était une fois
 
 # Evaluation parameters
-EVAL_MODEL_NAME ?= MaxLSB/LeCarnet-3M
+EVAL_MODEL ?= MaxLSB/LeCarnet-3M
+JUDGE_MODEL ?= mistral-large-2411
 
 .PHONY: env generate-mistral generate-openai push-dataset train inference eval push-model
 
@@ -73,6 +78,7 @@ inference:
 eval:
 	$(PYTHON) $(EVAL_SCRIPT) \
 		--model_name $(EVAL_MODEL_NAME) \
+		--judge_model_name $(JUDGE_MODEL) \
 
 push-model:
 	$(PYTHON) $(PUSH_MODEL_SCRIPT) \

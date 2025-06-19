@@ -50,30 +50,28 @@ The training pipeline supports Weights & Biases (WandB) for tracking training an
 | Training    | `make train`       | `python src/train/train.py --model_config MODEL_CONFIG`                                                                                 | `MODEL_CONFIG=3M`                              |
 | Push Model to HF   | `make push-model`   | `python src/inference/push-model.py --repo_name HF_REPO --model_dir MODEL_DIR`                                              | `HF_REPO=MaxLSB/LeCarnet-3M`, `MODEL_DIR=LeCarnet-3M/model_weights/` |
 
-⚠️ Check `src/train/configs.py` for fine-grained hyperparameter tuning. MODEL_CONFIG="custom" to use your own custom model config.
+⚠️ Check `src/train/configs.py` for fine-grained hyperparameter tuning. `MODEL_CONFIG=custom` to use your own custom model config.
 
 ## 4. Evaluation & Inference
 
 | Task        | Make Command       | Equivalent CLI Command                                                                                                                                               | Default Values                                                                 |
 |-------------|--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
-| Evaluation    | `make eval`       | `python src/eval/eval.py --model_name EVAL_MODEL_NAME`                                                                                | `EVAL_MODEL_NAME=MaxLSB/LeCarnet-3M`                              |
+| Evaluation    | `make eval`       | `python src/eval/eval.py --model_name EVAL_MODEL --judge_model_name JUDGE_MODEL`                                                                                | `EVAL_MODEL=MaxLSB/LeCarnet-3M`, `JUDGE_MODEL=mistral-large-2411`                              |
 | Inference   | `make inference`   | `python src/inference/inference.py --model_name MODEL_NAME --prompt PROMPT --max_new_tokens MAX_NEW_TOKENS`                                              | `MODEL_NAME=MaxLSB/LeCarnet-3M`, `PROMPT="Il était une fois"`, `MAX_NEW_TOKENS=512` |
 
 ## 5. Data Generation
-For Generation tasks set your API key (for translation the model runs locally):
+For Generation tasks set your API key:
 
-**Linux/MacOS:**
 ```bash
+# Linux/MacOS
 export MISTRAL_API_KEY=your_api_key
-```
-```bash
-export OPENAI_API_KEY=your_api_key
-```
-**Windows:**
-```bash
+# Windows
 $env:MISTRAL_API_KEY="your_api_key"
 ```
 ```bash
+# Linux/MacOS
+export OPENAI_API_KEY=your_api_key
+# Windows
 $env:OPENAI_API_KEY="your_api_key"
 ```
 
@@ -82,8 +80,6 @@ $env:OPENAI_API_KEY="your_api_key"
 | Generate with Mistral         | `make generate-mistral`| `python src/data/mistral.py --model_name MISTRAL_MODEL --total_requests MISTRAL_REQUESTS, --num_workers NUM_WORKERS`                                              | `MISTRAL_MODEL=mistral-large-2411`, `MISTRAL_REQUESTS=100000`, `NUM_WORKERS=4`                                               |
 | Generate with OpenAI          | `make generate-openai` | `python src/data/openai.py --model_name OPENAI_MODEL --total_requests OPENAI_REQUESTS`                                                   | `OPENAI_MODEL=gpt-3.5-turbo`, `OPENAI_REQUESTS=100000`                                                    |
 | Push Dataset to HF            | `make push-dataset`    | `python src/data/push_dataset.py --folder_path FOLDER_PATH --repo_name REPO_NAME`                                           | `FOLDER_PATH=./dataset/`, `REPO_NAME=MaxLSB/LeCarnet`                                                |
-
-_Not all arguments are listed here._
 
 ## 6. References
 
