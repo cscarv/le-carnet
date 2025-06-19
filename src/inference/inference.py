@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--temperature",
         type=float,
-        default=0.5,
+        default=0.7,
         help="Temperature for sampling",
     )
     parser.add_argument(

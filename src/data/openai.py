@@ -10,6 +10,9 @@ from tqdm import tqdm
 
 
 class Vocabulary:
+    """
+    A class to load and manage vocabulary for story generation.
+    """
     def __init__(self, vocab_dir="vocabulary"):
         categories = ["adjectives", "nouns", "verbs", "features"]
         for category in categories:

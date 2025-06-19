@@ -10,6 +10,9 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 
 
 class Vocabulary:
+    """
+    A class to load and manage vocabulary for story generation.
+    """
     def __init__(self, vocab_dir="src/data/vocabulary"):
         categories = ["adjectives", "nouns", "verbs", "features"]
         for category in categories:
@@ -50,6 +53,9 @@ def build_message(vocab: Vocabulary):
 
 
 def get_client(api_key: str):
+    """
+    Initializes the Mistral client with the provided API key.
+    """
     return Mistral(api_key=api_key)
 
 
@@ -58,9 +64,9 @@ def send_message(client, message, model_name):
     Sends a message to the Mistral API with retries and exponential backoff.
     Adds a small random delay to stagger requests.
     """
-    time.sleep(random.uniform(0.1, 0.5))  # Stagger requests to avoid rate limit spikes
+    time.sleep(random.uniform(0.1, 0.5))  # To avoid rate limit spikes
     backoff = 1.0
-    for attempt in range(5):  # 5 attempts total
+    for attempt in range(5):
         try:
             resp = client.chat.complete(
                 messages=message,
@@ -118,7 +124,8 @@ def generate_stories(
                 pass
             except Exception as e:
                 pass
-
+            
+            # Saving stories by batch of 100
             if len(stories_buffer) >= 100:
                 save_stories_to_jsonl(stories_buffer, output_file)
                 stories_buffer.clear()
@@ -154,7 +161,7 @@ def main(args):
             "API key not found. Set the MISTRAL_API_KEY environment variable."
         )
 
-    # Initialize the vocabulary and client
+    # Initialize the vocabulary, client and output file
     vocab = Vocabulary()
     client = get_client(api_key=api_key)
     output_file = generate_output_file(args.model_name, args.output_dir)
