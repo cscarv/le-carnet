@@ -87,7 +87,7 @@ To run the evaluation you also need to set up your Mistral API key.
 
 | Model | Judge | Grammar | Creativity | Coherence | Logic |
 |-------|-------|---------|------------|-----------|-------|
-| LeCarn-3M | mistral-large-2411 | 6.12 | 6.42 | 5.94 | 5.90 |
+| LeCarnet-3M | mistral-large-2411 | 6.12 | 6.42 | 5.94 | 5.90 |
 | LeCarnet-8M | mistral-large-2411 | 7.06 | 7.20 | 7.56 | 7.28 |
 | LeCarnet-21M | mistral-large-2411 | 7.72 | 7.48 | 8.32 | 7.90 |
 
