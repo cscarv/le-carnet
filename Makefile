@@ -77,7 +77,7 @@ inference:
 
 eval:
 	$(PYTHON) $(EVAL_SCRIPT) \
-		--model_name $(EVAL_MODEL_NAME) \
+		--model_name $(EVAL_MODEL) \
 		--judge_model_name $(JUDGE_MODEL) \
 
 push-model:

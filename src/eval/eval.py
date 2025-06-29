@@ -48,38 +48,27 @@ def get_evaluation_response(client: Mistral, message: str, model_name: str) -> s
     <Logic>[score]</Logic>
     """
 
-    backoff = 1.0
-    for attempt in range(5):
-        try:
-            resp1 = client.chat.complete(
-                messages=[{"role": "user", "content": prompt1}],
-                model=model_name,
-                temperature=0.7,
-                max_tokens=512,
-            )
-            reply1 = resp1.choices[0].message.content
+    resp1 = client.chat.complete(
+        messages=[{"role": "user", "content": prompt1}],
+        model=model_name,
+        temperature=0.5,
+        max_tokens=512,
+    )
+    reply1 = resp1.choices[0].message.content
 
-            full_messages = [
-                {"role": "user", "content": prompt1},
-                {"role": "assistant", "content": reply1},
-                {"role": "user", "content": prompt2},
-            ]
-
-            resp2 = client.chat.complete(
-                messages=full_messages,
-                model=model_name,
-                temperature=0.7,
-                max_tokens=512,
-            )
-            return resp2.choices[0].message.content
-        except (SDKError, RemoteProtocolError) as e:
-            if attempt < 4:
-                wait = backoff + random.random() * 0.5
-                time.sleep(wait)
-                backoff *= 2
-            else:
-                raise e
-    raise RuntimeError("Max retries reached")
+    full_messages = [
+        {"role": "user", "content": prompt1},
+        {"role": "assistant", "content": reply1},
+        {"role": "user", "content": prompt2},
+    ]
+    time.sleep(1)
+    resp2 = client.chat.complete(
+        messages=full_messages,
+        model=model_name,
+        temperature=0.5,
+        max_tokens=512,
+    )
+    return resp2.choices[0].message.content
 
 
 def extract_grades(response: str) -> list[int]:
@@ -100,6 +89,8 @@ def extract_grades(response: str) -> list[int]:
 def eval_story(client: Mistral, message: str, model_name: str) -> list[int]:
     """Evaluate a story and return grades, with retry logic."""
     for attempt in range(3):
+        if attempt > 0:
+            print(f"Retry {attempt}/3")
         try:
             response = get_evaluation_response(client, message, model_name)
             return extract_grades(response)
@@ -114,7 +105,7 @@ def eval_story(client: Mistral, message: str, model_name: str) -> list[int]:
                 time.sleep(1 + random.random() * 0.5)
             else:
                 raise e
-    raise RuntimeError("Max retries reached in eval_story")
+    raise RuntimeError("Max retries reached! Unable to evaluate the story.")
 
 
 def generate_completions(model, tokenizer, prompts, device, batch_size=2) -> list[str]:
@@ -122,7 +113,7 @@ def generate_completions(model, tokenizer, prompts, device, batch_size=2) -> lis
     completions = []
     for i in tqdm(
         range(0, len(prompts), batch_size),
-        desc="Generating completions",
+        desc="Generating completions (batches)",
         total=(len(prompts) + batch_size - 1) // batch_size,
     ):
         base_batch_prompts = prompts[i : i + batch_size]
@@ -156,6 +147,15 @@ def get_dataset(name: str, split: str = "test", cache_dir: str = None):
     return load_dataset(name, split=split, cache_dir=cache_dir)
 
 
+def get_tokenizer(model_name: str):
+    """Load and return the tokenizer for the specified model."""
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer.padding_side = "left"
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    return tokenizer
+
+
 def save_results_to_json(
     output_dir: str,
     model_name: str,
@@ -184,9 +184,9 @@ def main(args):
         )
 
     # Load model and tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    tokenizer = get_tokenizer(args.model_name)
     model = AutoModelForCausalLM.from_pretrained(args.model_name).to(args.device)
-    dataset = get_dataset(args.dataset_name, split="test[:5]", cache_dir="cache/")
+    dataset = get_dataset(args.dataset_name, split="test", cache_dir="cache/")
 
     # Extract prompts
     prompts = [example["text"] for example in dataset]
@@ -216,7 +216,7 @@ def main(args):
                 grade = future.result()
                 grades.append((index, grade))
             except Exception as e:
-                print(f"Evaluation for story {index} failed: {e}")
+                raise RuntimeError(f"Evaluation for story {index} failed: {e}")
 
     # Sort grades by original index and extract them
     grades.sort(key=lambda x: x[0])
@@ -225,6 +225,8 @@ def main(args):
     # Check if any evaluations succeeded
     if not grades:
         raise RuntimeError("No stories were successfully evaluated.")
+
+    print(f"Correctly evaluated {len(grades)} stories out of {len(completions)} total.")
 
     # Compute and display final grades
     final_grade = np.mean(grades, axis=0).tolist()
@@ -277,7 +279,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_workers",
         type=int,
-        default=4,
+        default=1,
         help="Number of workers for parallel evaluation.",
     )
     parser.add_argument(

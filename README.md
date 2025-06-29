@@ -52,14 +52,7 @@ The training pipeline supports Weights & Biases (WandB) for tracking training an
 
 ⚠️ Check `src/train/configs.py` for fine-grained hyperparameter tuning. `MODEL_CONFIG=custom` to use your own custom model config.
 
-## 4. Evaluation & Inference
-
-| Task        | Make Command       | Equivalent CLI Command                                                                                                                                               | Default Values                                                                 |
-|-------------|--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
-| Evaluation    | `make eval`       | `python src/eval/eval.py --model_name EVAL_MODEL --judge_model_name JUDGE_MODEL`                                                                                | `EVAL_MODEL=MaxLSB/LeCarnet-3M`, `JUDGE_MODEL=mistral-large-2411`                              |
-| Inference   | `make inference`   | `python src/inference/inference.py --model_name MODEL_NAME --prompt PROMPT --max_new_tokens MAX_NEW_TOKENS`                                              | `MODEL_NAME=MaxLSB/LeCarnet-3M`, `PROMPT="Il était une fois"`, `MAX_NEW_TOKENS=512` |
-
-## 5. Data Generation
+## 4. Data Generation
 For Generation tasks set your API key:
 
 ```bash
@@ -81,7 +74,25 @@ $env:OPENAI_API_KEY="your_api_key"
 | Generate with OpenAI          | `make generate-openai` | `python src/data/openai.py --model_name OPENAI_MODEL --total_requests OPENAI_REQUESTS`                                                   | `OPENAI_MODEL=gpt-3.5-turbo`, `OPENAI_REQUESTS=100000`                                                    |
 | Push Dataset to HF            | `make push-dataset`    | `python src/data/push_dataset.py --folder_path FOLDER_PATH --repo_name REPO_NAME`                                           | `FOLDER_PATH=./dataset/`, `REPO_NAME=MaxLSB/LeCarnet`                                                |
 
-## 6. References
+## 5. Evaluation & Inference
+
+To run the evaluation you also need to set up your Mistral API key.
+
+| Task        | Make Command       | Equivalent CLI Command                                                                                                                                               | Default Values                                                                 |
+|-------------|--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| Evaluation    | `make eval`       | `python src/eval/eval.py --model_name EVAL_MODEL --judge_model_name JUDGE_MODEL`                                                                                | `EVAL_MODEL=MaxLSB/LeCarnet-3M`, `JUDGE_MODEL=mistral-large-2411`                              |
+| Inference   | `make inference`   | `python src/inference/inference.py --model_name MODEL_NAME --prompt PROMPT --max_new_tokens MAX_NEW_TOKENS`                                              | `MODEL_NAME=MaxLSB/LeCarnet-3M`, `PROMPT="Il était une fois"`, `MAX_NEW_TOKENS=512` |
+
+## 6. Results
+
+| Model | Judge | Grammar | Creativity | Coherence | Logic |
+|-------|-------|---------|------------|-----------|-------|
+| LeCarn-3M | mistral-large-2411 | 6.12 | 6.42 | 5.94 | 5.90 |
+| LeCarnet-8M | mistral-large-2411 | 7.06 | 7.20 | 7.56 | 7.28 |
+| LeCarnet-21M | mistral-large-2411 | 7.72 | 7.48 | 8.32 | 7.90 |
+
+
+## 7. References
 
 - [`TinyStories: How Small Can Language Models Be and Still Speak Coherent English?`](https://arxiv.org/pdf/2305.07759)
 - [`Regional Tiny Stories: Using Small Models to Compare Language Learning and Tokenizer Performance`](https://arxiv.org/pdf/2504.07989)
