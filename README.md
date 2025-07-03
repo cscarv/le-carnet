@@ -1,4 +1,4 @@
-# LeCarnet: A Dataset for Tiny French Language Models
+# LeCarnet: A French Dataset for Small Language Models
 
 <div align="center">
   <img src="./media/lecarnet.png" width="100%" alt="LeCarnet Logo" />
