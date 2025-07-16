@@ -12,9 +12,10 @@ import math
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from tqdm import tqdm
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 from transformers import (
     AutoTokenizer,
+    PreTrainedTokenizerFast,
     LlamaConfig,
     LlamaForCausalLM,
     get_scheduler,
@@ -26,7 +27,8 @@ from utils import (
     get_mixed_precision_dtype,
 )
 from configs import (
-    TrainConfig,
+    TrainConfigEnglish,
+    TrainConfigFrench,
     CustomConfig,
     ModelConfig_3M,
     ModelConfig_8M,
@@ -271,7 +273,12 @@ def main(args):
     Main function to train the Llama model on a single GPU.
     """
     # Train config
-    train_config = TrainConfig()
+    if args.language == "english":
+        train_config = TrainConfigEnglish()
+    elif args.language == "french":
+        train_config = TrainConfigFrench()
+    else:
+        raise ValueError("Language must be either 'english' or 'french'.")
 
     # Make sure the Hugging Face token is set
     if not os.getenv("HF_TOKEN"):
@@ -280,19 +287,32 @@ def main(args):
         )
 
     # Initialize wandb
-    wandb.init(project="LeCarnet", name="le-carnet-training-run")
+    wandb.init(project="multi-teacher-distillation", name="english-teacher-3m" if args.language == "english" else "french-teacher-3m")
 
     tqdm.write("Loading dataset and tokenizer...")
     # Load dataset and tokenizer
-    train_dataset, val_dataset = get_dataset(
-        train_config.dataset_name, train_config.cache_dir
-    )
-    tokenizer = Tokenizer(train_config.tokenizer_name).get_tokenizer()
+    # train_dataset, val_dataset = get_dataset(
+    #     train_config.dataset_name, train_config.cache_dir
+    # )
+    train_dataset = load_from_disk(train_config.train_dataset_path)
+    val_dataset = load_from_disk(train_config.val_dataset_path)
+    # tokenizer = Tokenizer(train_config.tokenizer_name).get_tokenizer()
+    tokenizer = PreTrainedTokenizerFast(tokenizer_file=train_config.tokenizer_path)
+    special_tokens_dict = {
+        "pad_token": "[PAD]",
+        "cls_token": "[CLS]",
+        "sep_token": "[SEP]",
+        "mask_token": "[MASK]",
+        "eos_token": "[EOS]",
+        "unk_token": "[UNK]"
+    }
+    tokenizer.add_special_tokens(special_tokens_dict)
+    print("EOS token:", tokenizer.eos_token)
 
     # Display training information
     tqdm.write(f"Using device: {train_config.device}")
     tqdm.write(f"Config: {args.model_config}")
-    tqdm.write(f"Tokenizer: {train_config.tokenizer_name}")
+    tqdm.write(f"Tokenizer: {train_config.tokenizer_path}")
     tqdm.write(f"Output directory: {train_config.output_dir}")
     tqdm.write(
         f"Loaded {len(train_dataset)} training samples and {len(val_dataset)} validation samples"
@@ -373,5 +393,7 @@ if __name__ == "__main__":
         default="3M",
         help="Size of the model to train.",
     )
+    parser.add_argument("--language", type=str, choices=["english", "french"], default="english",
+                        help="Language of the dataset to train on.")
     args = parser.parse_args()
     main(args)
