@@ -1,6 +1,10 @@
 import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+tok = "hf" + "." + "tokens"
+with open(tok, "r") as f:
+    hf_token = f.read().strip()
+os.environ["HF_TOKEN"] = hf_token
 import argparse
 import torch
 import wandb

@@ -20,3 +20,4 @@ stories/
 dataset/
 .DS_Store
 eval_results/
+hf.tokens
