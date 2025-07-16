@@ -170,6 +170,7 @@ def train(
         start_epoch = checkpoint["epoch"] + 1
         effective_steps = checkpoint["effective_steps"]
         best_val_loss = checkpoint["best_val_loss"]
+        total_tokens_seen = checkpoint["total_tokens_seen"]
         tqdm.write(
             f"Checkpoint loaded! Resuming from epoch {start_epoch}, effective_steps {effective_steps}"
         )
@@ -177,14 +178,19 @@ def train(
         start_epoch = 0
         effective_steps = 0
         best_val_loss = float("inf")
+        total_tokens_seen = 0
 
     gradient_accumulation_steps = config.gradient_accumulation_steps
-    start_context = "Il était une fois"
+    if args.language == "english":
+        start_context = "Once upon a time"
+    elif args.language == "french":
+        start_context = "Il était une fois"
     pbar = tqdm(total=config.total_iterations, initial=effective_steps, desc="Training")
     model.train()
 
     for epoch in range(start_epoch, config.num_epochs):
         for step, batch in enumerate(train_dataloader, start=1):
+            total_tokens_seen += batch["input_ids"].numel()
             loss = compute_batch_loss(
                 model, batch, loss_fn, config.device, autocast_ctx
             )
@@ -220,6 +226,7 @@ def train(
                     {
                         "train_loss": loss.item() * gradient_accumulation_steps,
                         "learning_rate": optimizer.param_groups[0]["lr"],
+                        "total_tokens_seen": total_tokens_seen
                     }
                 )
 
@@ -228,7 +235,7 @@ def train(
                     model, loss_fn, val_dataloader, config.device, autocast_ctx
                 )
                 tqdm.write(f"loss/val: {val_loss:.4f} | perplexity: {perplexity:.2f}")
-                wandb.log({"val_loss": val_loss, "perplexity": perplexity})
+                wandb.log({"val_loss": val_loss, "perplexity": perplexity, "total_tokens_seen": total_tokens_seen})
 
                 # Generate text for evaluation
                 generated_text = generate_text(
@@ -255,6 +262,7 @@ def train(
             "epoch": epoch,
             "effective_steps": effective_steps,
             "best_val_loss": best_val_loss,
+            "total_tokens_seen": total_tokens_seen,
         }
         os.makedirs(config.output_dir + "checkpoints/", exist_ok=True)
         torch.save(
@@ -288,6 +296,30 @@ def main(args):
 
     # Initialize wandb
     wandb.init(project="multi-teacher-distillation", name="english-teacher-3m" if args.language == "english" else "french-teacher-3m")
+
+    # Log config to wandb
+    config_dict = {
+        "train_dataset_path": train_config.train_dataset_path,
+        "val_dataset_path": train_config.val_dataset_path,
+        "tokenizer_path": train_config.tokenizer_path,
+        "output_dir": train_config.output_dir,
+        "load_checkpoint_path": train_config.load_checkpoint_path,
+        "load_checkpoint": train_config.load_checkpoint,
+        "mixed_precision": train_config.mixed_precision,
+        "cache_dir": train_config.cache_dir,
+        "device": train_config.device,
+        "eval_steps": train_config.eval_steps,
+        "gradient_accumulation_steps": train_config.gradient_accumulation_steps,
+        "train_batch_size": train_config.train_batch_size,
+        "eval_batch_size": train_config.eval_batch_size,
+        "learning_rate": train_config.learning_rate,
+        "num_warmup_steps": train_config.num_warmup_steps,
+        "num_epochs": train_config.num_epochs,
+        "block_size": train_config.block_size,
+        "num_workers": train_config.num_workers,
+        "model_config": args.model_config,
+    }
+    wandb.config.update(config_dict)
 
     tqdm.write("Loading dataset and tokenizer...")
     # Load dataset and tokenizer
