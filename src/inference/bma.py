@@ -4,11 +4,12 @@ import torch.nn.functional as F
 from transformers import PreTrainedModel, AutoModelForCausalLM, AutoTokenizer
 
 class MixtureOfCausalLM(PreTrainedModel):
-    def __init__(self, model1, model2, model2_weight=1.0):
+    def __init__(self, model1, model2, model2_weight=1.0, window_size=None):
         super().__init__(model1.config)
         self.model1 = model1
         self.model2 = model2
         self.log_model2_weight = np.log(model2_weight)
+        self.window_size = window_size  # None means use all tokens (current behavior)
         self._reset_state()
 
     def _reset_state(self):
@@ -16,6 +17,9 @@ class MixtureOfCausalLM(PreTrainedModel):
         self.running_logprobs2 = None
         self.past1 = None
         self.past2 = None
+        # For windowed approach
+        self.logprob_history1 = []
+        self.logprob_history2 = []
 
     def to(self, *args, **kwargs):
         super().to(*args, **kwargs)
@@ -24,14 +28,18 @@ class MixtureOfCausalLM(PreTrainedModel):
         self._reset_state()
         return self
 
-    def generate(self, input_ids, max_length=50, temperature=1.0, top_k=50, return_alphas=False, eos_token_id=None, init_with_prompt=True):
+    def generate(self, input_ids, max_length=50, temperature=1.0, top_k=50, return_alphas=False, eos_token_id=None, init_with_prompt=True, window_size=None):
         self._reset_state()
         self.eval()
+        
+        # Use instance window_size if not provided
+        if window_size is None:
+            window_size = self.window_size
         
         batch_size = input_ids.size(0)
         device = input_ids.device
         
-        with torch.no_grad():  # Move this to wrap everything
+        with torch.no_grad():
             # Compute initial alpha based on prompt likelihood
             out1 = self.model1(input_ids, use_cache=True)
             out2 = self.model2(input_ids, use_cache=True)
@@ -47,17 +55,37 @@ class MixtureOfCausalLM(PreTrainedModel):
                 log_probs1 = F.log_softmax(logits1, dim=-1)
                 log_probs2 = F.log_softmax(logits2, dim=-1)
                 
-                # Sum across sequence to get prompt log probabilities
-                prompt_logp1 = log_probs1.gather(2, targets.unsqueeze(-1)).squeeze(-1).sum(dim=1)
-                prompt_logp2 = log_probs2.gather(2, targets.unsqueeze(-1)).squeeze(-1).sum(dim=1)
+                # Get per-token log probabilities
+                token_logp1 = log_probs1.gather(2, targets.unsqueeze(-1)).squeeze(-1)  # (batch, seq_len)
+                token_logp2 = log_probs2.gather(2, targets.unsqueeze(-1)).squeeze(-1)  # (batch, seq_len)
                 
-                # Initialize running log probs with prompt probabilities
-                self.running_logprobs1 = prompt_logp1
-                self.running_logprobs2 = prompt_logp2
+                if window_size is None:
+                    # Use all prompt tokens
+                    prompt_logp1 = token_logp1.sum(dim=1)
+                    prompt_logp2 = token_logp2.sum(dim=1)
+                    self.running_logprobs1 = prompt_logp1
+                    self.running_logprobs2 = prompt_logp2
+                else:
+                    # Initialize windowed history with prompt tokens
+                    for i in range(token_logp1.size(1)):
+                        self.logprob_history1.append(token_logp1[:, i])
+                        self.logprob_history2.append(token_logp2[:, i])
+                    
+                    # Keep only the last window_size tokens
+                    if len(self.logprob_history1) > window_size:
+                        self.logprob_history1 = self.logprob_history1[-window_size:]
+                        self.logprob_history2 = self.logprob_history2[-window_size:]
+                    
+                    # Sum the windowed history
+                    self.running_logprobs1 = torch.stack(self.logprob_history1).sum(dim=0)
+                    self.running_logprobs2 = torch.stack(self.logprob_history2).sum(dim=0)
             else:
-                # Single token prompt - no history to evaluate, start neutral
+                # Single token prompt - start neutral
                 self.running_logprobs1 = torch.zeros(batch_size, device=device)
                 self.running_logprobs2 = torch.zeros(batch_size, device=device)
+                self.logprob_history1 = []
+                self.logprob_history2 = []
+
             print("Initial log probs for model 1:", self.running_logprobs1)
             print("Initial log probs for model 2:", self.running_logprobs2)
 
@@ -78,7 +106,7 @@ class MixtureOfCausalLM(PreTrainedModel):
                 self.past1 = out1.past_key_values
                 self.past2 = out2.past_key_values
                 
-                # Compute mixture weights based on running log probs (including prompt)
+                # Compute mixture weights based on running log probs
                 log_weights = torch.stack([self.running_logprobs1, self.log_model2_weight + self.running_logprobs2], dim=0)
                 weights = F.softmax(log_weights, dim=0)
                 alpha = weights[0].unsqueeze(1)  # shape: (batch, 1)
@@ -106,14 +134,11 @@ class MixtureOfCausalLM(PreTrainedModel):
                 probs = F.softmax(mixed_logits, dim=-1)
                 next_token = torch.multinomial(probs, num_samples=1)
                 
-                # Early stopping: if eos_token_id is generated, mark as finished
+                # Early stopping logic...
                 if eos_token_id is not None:
                     just_finished = (next_token.squeeze(-1) == eos_token_id) & (~finished)
-                    lengths[just_finished] = generated.size(1) + 1  # +1 for the new token
+                    lengths[just_finished] = generated.size(1) + 1
                     finished = finished | just_finished
-                
-                # For finished sequences, keep appending pad tokens (or eos_token_id)
-                if eos_token_id is not None:
                     next_token = torch.where(
                         finished.unsqueeze(-1),
                         torch.full_like(next_token, eos_token_id),
@@ -127,14 +152,28 @@ class MixtureOfCausalLM(PreTrainedModel):
                 logp1 = F.log_softmax(logits1, dim=-1).gather(1, token_id.unsqueeze(1)).squeeze(1)
                 logp2 = F.log_softmax(logits2, dim=-1).gather(1, token_id.unsqueeze(1)).squeeze(1)
                 
-                self.running_logprobs1 += logp1
-                self.running_logprobs2 += logp2
+                if window_size is None:
+                    # Cumulative (original behavior)
+                    self.running_logprobs1 += logp1
+                    self.running_logprobs2 += logp2
+                else:
+                    # Windowed approach
+                    self.logprob_history1.append(logp1)
+                    self.logprob_history2.append(logp2)
+                    
+                    # Keep only the last window_size tokens
+                    if len(self.logprob_history1) > window_size:
+                        self.logprob_history1.pop(0)
+                        self.logprob_history2.pop(0)
+                    
+                    # Recompute running log probs as sum of window
+                    self.running_logprobs1 = torch.stack(self.logprob_history1).sum(dim=0)
+                    self.running_logprobs2 = torch.stack(self.logprob_history2).sum(dim=0)
 
-                # If all sequences are finished, break early
                 if finished.all():
                     break
 
-            # Truncation code also inside no_grad
+            # Truncation logic...
             max_gen_len = generated.size(1)
             output = []
             for i in range(batch_size):
