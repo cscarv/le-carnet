@@ -151,13 +151,13 @@ class MixtureOfCausalLM(PreTrainedModel):
                 token_id = next_token.squeeze(-1)
                 logp1 = F.log_softmax(logits1, dim=-1).gather(1, token_id.unsqueeze(1)).squeeze(1)
                 logp2 = F.log_softmax(logits2, dim=-1).gather(1, token_id.unsqueeze(1)).squeeze(1)
-                
+
                 if window_size is None:
                     # Cumulative (original behavior)
                     self.running_logprobs1 += logp1
                     self.running_logprobs2 += logp2
                 else:
-                    # Windowed approach
+                    # Windowed approach - compute joint probability of last K tokens
                     self.logprob_history1.append(logp1)
                     self.logprob_history2.append(logp2)
                     
@@ -166,9 +166,46 @@ class MixtureOfCausalLM(PreTrainedModel):
                         self.logprob_history1.pop(0)
                         self.logprob_history2.pop(0)
                     
-                    # Recompute running log probs as sum of window
-                    self.running_logprobs1 = torch.stack(self.logprob_history1).sum(dim=0)
-                    self.running_logprobs2 = torch.stack(self.logprob_history2).sum(dim=0)
+                    # Compute joint log probability of the window using chain rule
+                    # p(x_{t-k+1}, ..., x_t) = p(x_{t-k+1}|context) * p(x_{t-k+2}|context,x_{t-k+1}) * ... * p(x_t|context,...,x_{t-1})
+                    
+                    if len(self.logprob_history1) == 1:
+                        # Only one token in window - use its conditional probability
+                        self.running_logprobs1 = self.logprob_history1[0]
+                        self.running_logprobs2 = self.logprob_history2[0]
+                    else:
+                        # Multiple tokens - need to recompute first token's probability given its actual context
+                        window_len = len(self.logprob_history1)
+                        window_start_idx = generated.size(1) - window_len
+                        
+                        # Get context before the window starts
+                        if window_start_idx > 0:
+                            context = generated[:, :window_start_idx]
+                            first_window_token = generated[:, window_start_idx]
+                            
+                            # Compute p(first_window_token | context) by re-running models on context
+                            with torch.no_grad():
+                                out1_ctx = self.model1(context)
+                                out2_ctx = self.model2(context)
+                                
+                                first_token_logits1 = out1_ctx.logits[:, -1, :]
+                                first_token_logits2 = out2_ctx.logits[:, -1, :]
+                                
+                                first_logp1 = F.log_softmax(first_token_logits1, dim=-1).gather(1, first_window_token.unsqueeze(1)).squeeze(1)
+                                first_logp2 = F.log_softmax(first_token_logits2, dim=-1).gather(1, first_window_token.unsqueeze(1)).squeeze(1)
+                        else:
+                            # Window starts at the very beginning - use uniform prior (log prob = 0)
+                            # Or you could use a learned unconditional probability here
+                            first_logp1 = torch.zeros_like(self.logprob_history1[0])
+                            first_logp2 = torch.zeros_like(self.logprob_history2[0])
+                        
+                        # Joint probability = p(first|context) + sum of remaining conditional probabilities
+                        # The remaining probabilities in logprob_history are already conditional on their proper contexts
+                        remaining_logp1 = torch.stack(self.logprob_history1[1:]).sum(dim=0) if len(self.logprob_history1) > 1 else torch.zeros_like(first_logp1)
+                        remaining_logp2 = torch.stack(self.logprob_history2[1:]).sum(dim=0) if len(self.logprob_history2) > 1 else torch.zeros_like(first_logp2)
+                        
+                        self.running_logprobs1 = first_logp1 + remaining_logp1
+                        self.running_logprobs2 = first_logp2 + remaining_logp2
 
                 if finished.all():
                     break
