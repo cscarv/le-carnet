@@ -44,6 +44,30 @@ class TrainConfigFrench:
     block_size: int = 512
     num_workers: int = 4
 
+@dataclass
+class DistillConfig:
+    train_dataset_path: str = "/nobackup/users/scarv/multi-teacher-distillation/data/mixed_eng_fr_tinystories_0.5_max_4012794"
+    eng_val_dataset_path: str = "/nobackup/users/scarv/multi-teacher-distillation/data/tinystories_val"
+    fr_val_dataset_path: str = "/nobackup/users/scarv/multi-teacher-distillation/data/lecarnet_val"
+    teacher1_model_path: str = "/nobackup/users/scarv/multi-teacher-distillation/le-carnet/checkpoints/english/model_weights"
+    teacher2_model_path: str = "/nobackup/users/scarv/multi-teacher-distillation/le-carnet/checkpoints/french/model_weights"
+    tokenizer_path: str = "/nobackup/users/scarv/multi-teacher-distillation/data/eng_fr_tokenizer/tokenizer.json"
+    output_dir: str = "multi-teacher-distillation/le-carnet/checkpoints/french"
+    load_checkpoint_path: str = "multi-teacher-distillation/le-carnet/checkpoints/french/checkpoint-epoch-0.pt"
+    load_checkpoint: bool = False
+    mixed_precision: bool = True
+    cache_dir: str = "cache/"
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    eval_steps: int = 500
+    gradient_accumulation_steps: int = 2
+    train_batch_size: int = 100
+    eval_batch_size: int = 100
+    learning_rate: float = 5e-4
+    num_warmup_steps: int = 5000
+    num_epochs: int = 10
+    block_size: int = 512
+    num_workers: int = 4
+
 
 @dataclass
 class CustomConfig:
